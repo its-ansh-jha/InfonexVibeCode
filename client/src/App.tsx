@@ -48,14 +48,8 @@ function Router() {
 
   return (
     <Switch>
-      <Route path="/">
-        {user ? <Redirect to="/projects" /> : <LoginPage />}
-      </Route>
-      <Route path="/login">
-        {user ? <Redirect to="/projects" /> : <LoginPage />}
-      </Route>
       <Route path="/projects">
-        <ProtectedRoute component={ProjectsPage} />
+        {!user ? <Redirect to="/" /> : <ProjectsPage />}
       </Route>
       <Route path="/project/:id/chat">
         <ProtectedRoute component={ChatPage} />
@@ -65,6 +59,9 @@ function Router() {
       </Route>
       <Route path="/project/:id/preview">
         <ProtectedRoute component={PreviewPage} />
+      </Route>
+      <Route path="/">
+        {user ? <Redirect to="/projects" /> : <LoginPage />}
       </Route>
       <Route component={NotFound} />
     </Switch>

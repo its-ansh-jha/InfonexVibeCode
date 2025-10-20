@@ -1,15 +1,6 @@
 // Firebase configuration - referenced from firebase_barebones_javascript blueprint
 import { initializeApp } from "firebase/app";
-import { 
-  getAuth, 
-  GoogleAuthProvider, 
-  signInWithPopup, 
-  signOut, 
-  onAuthStateChanged, 
-  setPersistence,
-  browserLocalPersistence,
-  type User 
-} from "firebase/auth";
+import { getAuth, GoogleAuthProvider, signInWithRedirect, signOut, onAuthStateChanged, type User } from "firebase/auth";
 
 const firebaseConfig = {
   apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
@@ -21,16 +12,10 @@ const firebaseConfig = {
 
 const app = initializeApp(firebaseConfig);
 export const auth = getAuth(app);
-
-// Set persistence to LOCAL so auth state persists across browser sessions
-setPersistence(auth, browserLocalPersistence).catch((error) => {
-  console.error("Failed to set auth persistence:", error);
-});
-
 export const googleProvider = new GoogleAuthProvider();
 
-// Auth helpers - using popup instead of redirect to avoid page reload issues
-export const signInWithGoogle = () => signInWithPopup(auth, googleProvider);
+// Auth helpers
+export const signInWithGoogle = () => signInWithRedirect(auth, googleProvider);
 export const signOutUser = () => signOut(auth);
 export const onAuthChange = (callback: (user: User | null) => void) => 
   onAuthStateChanged(auth, callback);

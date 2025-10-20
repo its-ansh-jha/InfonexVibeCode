@@ -1,12 +1,14 @@
-import { Route, Switch, Redirect } from "wouter";
+import { Switch, Route, Redirect } from "wouter";
 import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import { SidebarProvider } from "@/components/ui/sidebar";
+import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 import { ThemeProvider } from "@/contexts/ThemeContext";
+import { ThemeToggle } from "@/components/ThemeToggle";
 import { AppSidebar } from "@/components/AppSidebar";
+import { MobileNav } from "@/components/MobileNav";
 import LoginPage from "@/pages/LoginPage";
 import ProjectsPage from "@/pages/ProjectsPage";
 import ChatPage from "@/pages/ChatPage";
@@ -15,12 +17,12 @@ import PreviewPage from "@/pages/PreviewPage";
 import NotFound from "@/pages/not-found";
 import { Loader2 } from "lucide-react";
 
-function ProtectedRoute({ component: Component, ...rest }: { component: React.ComponentType; path: string }) {
+function ProtectedRoute({ component: Component }: { component: React.ComponentType }) {
   const { user, loading } = useAuth();
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-background">
+      <div className="flex items-center justify-center min-h-screen">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
       </div>
     );
@@ -30,7 +32,7 @@ function ProtectedRoute({ component: Component, ...rest }: { component: React.Co
     return <Redirect to="/" />;
   }
 
-  return <Component {...rest} />;
+  return <Component />;
 }
 
 function Router() {
@@ -46,8 +48,11 @@ function Router() {
 
   return (
     <Switch>
+      <Route path="/">
+        {user ? <Redirect to="/projects" /> : <LoginPage />}
+      </Route>
       <Route path="/projects">
-        {!user ? <Redirect to="/" /> : <ProjectsPage />}
+        <ProtectedRoute component={ProjectsPage} />
       </Route>
       <Route path="/project/:id/chat">
         <ProtectedRoute component={ChatPage} />
@@ -57,9 +62,6 @@ function Router() {
       </Route>
       <Route path="/project/:id/preview">
         <ProtectedRoute component={PreviewPage} />
-      </Route>
-      <Route path="/">
-        {user ? <Redirect to="/projects" /> : <LoginPage />}
       </Route>
       <Route component={NotFound} />
     </Switch>

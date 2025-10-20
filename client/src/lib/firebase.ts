@@ -3,7 +3,7 @@ import { initializeApp } from "firebase/app";
 import { 
   getAuth, 
   GoogleAuthProvider, 
-  signInWithRedirect, 
+  signInWithPopup, 
   signOut, 
   onAuthStateChanged, 
   setPersistence,
@@ -29,8 +29,8 @@ setPersistence(auth, browserLocalPersistence).catch((error) => {
 
 export const googleProvider = new GoogleAuthProvider();
 
-// Auth helpers
-export const signInWithGoogle = () => signInWithRedirect(auth, googleProvider);
+// Auth helpers - using popup instead of redirect to avoid page reload issues
+export const signInWithGoogle = () => signInWithPopup(auth, googleProvider);
 export const signOutUser = () => signOut(auth);
 export const onAuthChange = (callback: (user: User | null) => void) => 
   onAuthStateChanged(auth, callback);

@@ -1,5 +1,5 @@
 import { createContext, useContext, useEffect, useState } from "react";
-import { getRedirectResult, type User } from "firebase/auth";
+import { type User } from "firebase/auth";
 import { auth, onAuthChange } from "@/lib/firebase";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
@@ -19,44 +19,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [, setLocation] = useLocation();
 
   useEffect(() => {
-    let hasHandledRedirect = false;
-
-    // Handle redirect result from Firebase
-    getRedirectResult(auth)
-      .then(async (result) => {
-        if (result?.user && !hasHandledRedirect) {
-          hasHandledRedirect = true;
-          try {
-            // Sync user with backend (handles both signup and login)
-            await apiRequest("POST", "/api/auth/sync", {
-              id: result.user.uid,
-              email: result.user.email,
-              displayName: result.user.displayName,
-              photoURL: result.user.photoURL,
-            });
-            toast({
-              title: "Welcome!",
-              description: "Successfully signed in with Google.",
-            });
-          } catch (error) {
-            console.error("Failed to sync user after redirect:", error);
-            toast({
-              title: "Sync failed",
-              description: "Please try refreshing the page.",
-              variant: "destructive",
-            });
-          }
-        }
-      })
-      .catch((error) => {
-        console.error("Auth redirect error:", error);
-        toast({
-          title: "Sign in failed",
-          description: error.message,
-          variant: "destructive",
-        });
-      });
-
     // Listen to auth state changes - this will fire immediately with cached user
     const unsubscribe = onAuthChange(async (firebaseUser) => {
       if (firebaseUser) {

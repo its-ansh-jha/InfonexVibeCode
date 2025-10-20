@@ -1,10 +1,35 @@
+import { useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { signInWithGoogle } from "@/lib/firebase";
-import { Code2, Sparkles } from "lucide-react";
+import { Code2, Sparkles, Loader2 } from "lucide-react";
 import { SiGoogle } from "react-icons/si";
+import { useToast } from "@/hooks/use-toast";
 
 export default function LoginPage() {
+  const [isLoading, setIsLoading] = useState(false);
+  const { toast } = useToast();
+
+  const handleGoogleSignIn = async () => {
+    setIsLoading(true);
+    try {
+      await signInWithGoogle();
+      toast({
+        title: "Success!",
+        description: "You've been signed in successfully.",
+      });
+    } catch (error: any) {
+      console.error("Sign in error:", error);
+      toast({
+        title: "Sign in failed",
+        description: error.message || "Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   return (
     <div className="min-h-screen flex items-center justify-center bg-background p-4">
       <Card className="w-full max-w-md">
@@ -28,13 +53,23 @@ export default function LoginPage() {
             </CardDescription>
           </div>
           <Button
-            onClick={signInWithGoogle}
+            onClick={handleGoogleSignIn}
             className="w-full h-12"
             size="lg"
+            disabled={isLoading}
             data-testid="button-google-signin"
           >
-            <SiGoogle className="mr-2 h-5 w-5" />
-            Continue with Google
+            {isLoading ? (
+              <>
+                <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                Signing in...
+              </>
+            ) : (
+              <>
+                <SiGoogle className="mr-2 h-5 w-5" />
+                Continue with Google
+              </>
+            )}
           </Button>
           <p className="text-xs text-center text-muted-foreground">
             By continuing, you agree to our Terms of Service and Privacy Policy

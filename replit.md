@@ -69,6 +69,7 @@ Vibe Code is an AI-powered coding platform that allows users to create, edit, an
 - `VITE_FIREBASE_PROJECT_ID`: Firebase project ID
 - `VITE_FIREBASE_APP_ID`: Firebase app ID
 - `VITE_FIREBASE_API_KEY`: Firebase API key
+- `FIREBASE_SERVICE_ACCOUNT`: Firebase service account JSON (for production auth)
 - `OPENROUTER_API_KEY`: OpenRouter API key
 - `E2B_API_KEY`: E2B sandbox API key
 - `SERPER_API_KEY`: Serper web search API key

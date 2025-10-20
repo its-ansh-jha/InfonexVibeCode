@@ -17,17 +17,36 @@ async function checkProjectOwnership(projectId: string, userId: string): Promise
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Auth - Sync Firebase user with database (requires valid ID token)
-  app.post("/api/auth/sync", requireAuth, async (req: Request, res) => {
+  // Auth sync endpoint - handles both signup and login
+  app.post("/api/auth/sync", async (req: Request, res) => {
     try {
       const { id, email, displayName, photoURL } = req.body;
-      
-      // Verify the ID matches the authenticated user
-      if (id !== req.userId) {
-        return res.status(403).json({ error: "Forbidden: ID mismatch" });
+
+      if (!id || !email) {
+        return res.status(400).json({ error: "Missing required fields" });
       }
-      
-      const user = await storage.createUser({ id, email, displayName, photoURL });
-      res.json(user);
+
+      // Check if user exists
+      let user = await storage.getUserById(id);
+      const isNewUser = !user;
+
+      if (!user) {
+        // Create new user (signup)
+        user = await storage.createUser({
+          id,
+          email,
+          displayName,
+          photoURL,
+        });
+      } else {
+        // Update existing user info (login)
+        user = await storage.updateUser(id, {
+          displayName,
+          photoURL,
+        });
+      }
+
+      res.json({ user, isNewUser });
     } catch (error: any) {
       res.status(500).json({ error: error.message });
     }
@@ -49,12 +68,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!project) {
         return res.status(404).json({ error: "Project not found" });
       }
-      
+
       // Check ownership
       if (project.userId !== req.userId) {
         return res.status(403).json({ error: "Forbidden: Access denied" });
       }
-      
+
       res.json(project);
     } catch (error: any) {
       res.status(500).json({ error: error.message });
@@ -77,7 +96,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!(await checkProjectOwnership(req.params.id, req.userId!))) {
         return res.status(403).json({ error: "Forbidden: Access denied" });
       }
-      
+
       await storage.deleteProject(req.params.id);
       res.json({ success: true });
     } catch (error: any) {
@@ -89,18 +108,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/projects/:id/connect-github", requireAuth, async (req: Request, res) => {
     try {
       const project = await storage.getProject(req.params.id);
-      
+
       if (!project) {
         return res.status(404).json({ error: "Project not found" });
       }
-      
+
       // Check ownership
       if (project.userId !== req.userId) {
         return res.status(403).json({ error: "Forbidden: Access denied" });
       }
 
       const { githubToken, repoFullName } = req.body;
-      
+
       // Note: In production, encrypt githubToken before storing
       // For now, we acknowledge this limitation in comments
       let updateData: any = { githubToken }; // TODO: Encrypt token with KMS or secrets vault
@@ -128,7 +147,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!(await checkProjectOwnership(req.params.id, req.userId!))) {
         return res.status(403).json({ error: "Forbidden: Access denied" });
       }
-      
+
       const updated = await storage.updateProject(req.params.id, {
         githubToken: null,
         githubRepoUrl: null,
@@ -144,16 +163,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/github/repos/:projectId", requireAuth, async (req: Request, res) => {
     try {
       const project = await storage.getProject(req.params.projectId);
-      
+
       if (!project) {
         return res.status(404).json({ error: "Project not found" });
       }
-      
+
       // Check ownership
       if (project.userId !== req.userId) {
         return res.status(403).json({ error: "Forbidden: Access denied" });
       }
-      
+
       if (!project.githubToken) {
         return res.status(400).json({ error: "GitHub not connected" });
       }
@@ -172,7 +191,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!(await checkProjectOwnership(req.params.projectId, req.userId!))) {
         return res.status(403).json({ error: "Forbidden: Access denied" });
       }
-      
+
       const messages = await storage.getMessagesByProjectId(req.params.projectId);
       res.json(messages);
     } catch (error: any) {
@@ -183,12 +202,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/messages", requireAuth, async (req: Request, res) => {
     try {
       const { projectId, content } = req.body;
-      
+
       // Check ownership
       if (!(await checkProjectOwnership(projectId, req.userId!))) {
         return res.status(403).json({ error: "Forbidden: Access denied" });
       }
-      
+
       // Save user message
       const userMessage = await storage.createMessage({
         projectId,
@@ -219,7 +238,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         for (const tool of aiResponse.toolCalls) {
           try {
             let result;
-            
+
             switch (tool.name) {
               case "write_file":
                 if (project.githubToken && project.githubOwner && project.githubRepoName) {
@@ -313,7 +332,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!(await checkProjectOwnership(req.params.projectId, req.userId!))) {
         return res.status(403).json({ error: "Forbidden: Access denied" });
       }
-      
+
       const status = sandboxes.get(req.params.projectId) || {
         sandboxId: null,
         running: false,
@@ -329,14 +348,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/sandbox/run", requireAuth, async (req: Request, res) => {
     try {
       const { projectId } = req.body;
-      
+
       // Check ownership
       if (!(await checkProjectOwnership(projectId, req.userId!))) {
         return res.status(403).json({ error: "Forbidden: Access denied" });
       }
-      
+
       const project = await storage.getProject(projectId);
-      
+
       if (!project) {
         return res.status(404).json({ error: "Project not found" });
       }
@@ -349,7 +368,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // In production, use: const sandbox = await Sandbox.create()
       const sandboxId = `sb_${Date.now()}`;
       const url = `https://sandbox-${sandboxId}.e2b.dev`; // Mock URL
-      
+
       sandboxes.set(projectId, {
         sandboxId,
         url,
@@ -371,12 +390,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/sandbox/stop", requireAuth, async (req: Request, res) => {
     try {
       const { projectId } = req.body;
-      
+
       // Check ownership
       if (!(await checkProjectOwnership(projectId, req.userId!))) {
         return res.status(403).json({ error: "Forbidden: Access denied" });
       }
-      
+
       sandboxes.delete(projectId);
       res.json({ success: true });
     } catch (error: any) {

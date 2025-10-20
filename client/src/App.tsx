@@ -1,14 +1,12 @@
-import { Switch, Route, Redirect } from "wouter";
+import { Route, Switch, Redirect } from "wouter";
 import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
+import { SidebarProvider } from "@/components/ui/sidebar";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 import { ThemeProvider } from "@/contexts/ThemeContext";
-import { ThemeToggle } from "@/components/ThemeToggle";
 import { AppSidebar } from "@/components/AppSidebar";
-import { MobileNav } from "@/components/MobileNav";
 import LoginPage from "@/pages/LoginPage";
 import ProjectsPage from "@/pages/ProjectsPage";
 import ChatPage from "@/pages/ChatPage";
@@ -17,12 +15,12 @@ import PreviewPage from "@/pages/PreviewPage";
 import NotFound from "@/pages/not-found";
 import { Loader2 } from "lucide-react";
 
-function ProtectedRoute({ component: Component }: { component: React.ComponentType }) {
+function ProtectedRoute({ component: Component, ...rest }: { component: React.ComponentType; path: string }) {
   const { user, loading } = useAuth();
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
+      <div className="min-h-screen flex items-center justify-center bg-background">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
       </div>
     );
@@ -32,7 +30,7 @@ function ProtectedRoute({ component: Component }: { component: React.ComponentTy
     return <Redirect to="/" />;
   }
 
-  return <Component />;
+  return <Component {...rest} />;
 }
 
 function Router() {

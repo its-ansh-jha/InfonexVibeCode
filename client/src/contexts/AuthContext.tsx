@@ -19,23 +19,33 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [, setLocation] = useLocation();
 
   useEffect(() => {
+    let hasHandledRedirect = false;
+
     // Handle redirect result from Firebase
     getRedirectResult(auth)
       .then(async (result) => {
-        if (result?.user) {
-          // Sync user with backend (handles both signup and login)
-          await apiRequest("POST", "/api/auth/sync", {
-            id: result.user.uid,
-            email: result.user.email,
-            displayName: result.user.displayName,
-            photoURL: result.user.photoURL,
-          });
-          toast({
-            title: "Welcome!",
-            description: "Successfully signed in with Google.",
-          });
-          // Redirect to projects page after successful authentication
-          setLocation("/projects");
+        if (result?.user && !hasHandledRedirect) {
+          hasHandledRedirect = true;
+          try {
+            // Sync user with backend (handles both signup and login)
+            await apiRequest("POST", "/api/auth/sync", {
+              id: result.user.uid,
+              email: result.user.email,
+              displayName: result.user.displayName,
+              photoURL: result.user.photoURL,
+            });
+            toast({
+              title: "Welcome!",
+              description: "Successfully signed in with Google.",
+            });
+          } catch (error) {
+            console.error("Failed to sync user after redirect:", error);
+            toast({
+              title: "Sync failed",
+              description: "Please try refreshing the page.",
+              variant: "destructive",
+            });
+          }
         }
       })
       .catch((error) => {
@@ -47,7 +57,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         });
       });
 
-    // Listen to auth state changes
+    // Listen to auth state changes - this will fire immediately with cached user
     const unsubscribe = onAuthChange(async (firebaseUser) => {
       if (firebaseUser) {
         // Sync user with backend on auth state change
@@ -70,7 +80,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     });
 
     return () => unsubscribe();
-  }, [toast]);
+  }, [toast, setLocation]);
 
   return (
     <AuthContext.Provider value={{ user, loading }}>

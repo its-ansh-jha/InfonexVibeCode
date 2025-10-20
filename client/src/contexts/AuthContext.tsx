@@ -3,6 +3,7 @@ import { getRedirectResult, type User } from "firebase/auth";
 import { auth, onAuthChange } from "@/lib/firebase";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
+import { useLocation } from "wouter";
 
 interface AuthContextType {
   user: User | null;
@@ -15,6 +16,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
+  const [, setLocation] = useLocation();
 
   useEffect(() => {
     // Handle redirect result from Firebase
@@ -32,6 +34,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             title: "Welcome!",
             description: "Successfully signed in with Google.",
           });
+          // Redirect to projects page after successful authentication
+          setLocation("/projects");
         }
       })
       .catch((error) => {

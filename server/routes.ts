@@ -3,7 +3,7 @@ import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { requireAuth } from "./middleware/auth";
 import { chatWithAI, SYSTEM_PROMPT } from "./lib/openrouter";
-import { listRepositories, writeFile, getFileContent } from "./lib/github";
+import { listRepositories, writeFile, getFileContent, listFiles } from "./lib/github";
 import { webSearch } from "./lib/serper";
 import { insertProjectSchema, insertMessageSchema } from "@shared/schema";
 import { encryptToken, decryptToken } from "./lib/encryption";
@@ -162,6 +162,33 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const decryptedToken = decryptToken(project.githubToken);
       const repos = await listRepositories(decryptedToken);
       res.json(repos);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.get("/api/github/files/:projectId", requireAuth, async (req: Request, res) => {
+    try {
+      const project = await storage.getProject(req.params.projectId);
+      
+      if (!project) {
+        return res.status(404).json({ error: "Project not found" });
+      }
+      
+      // Check ownership
+      if (project.userId !== req.userId) {
+        return res.status(403).json({ error: "Forbidden: Access denied" });
+      }
+      
+      if (!project.githubToken || !project.githubOwner || !project.githubRepoName) {
+        return res.status(400).json({ error: "GitHub repository not connected" });
+      }
+
+      const [, repo] = project.githubRepoName.split("/");
+      const path = req.query.path as string || '';
+      const decryptedToken = decryptToken(project.githubToken);
+      const files = await listFiles(decryptedToken, project.githubOwner, repo, path);
+      res.json(files);
     } catch (error: any) {
       res.status(500).json({ error: error.message });
     }

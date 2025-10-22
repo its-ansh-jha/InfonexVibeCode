@@ -20,24 +20,19 @@ export async function getFileContent(
   repo: string,
   path: string
 ): Promise<string> {
-  const octokit = await createGitHubClient(token);
-  try {
-    const { data } = await octokit.repos.getContent({
-      owner,
-      repo,
-      path,
-    });
+  const octokit = new Octokit({ auth: token });
 
-    if ("content" in data && data.content) {
-      return Buffer.from(data.content, "base64").toString("utf-8");
-    }
-    throw new Error("File content not found");
-  } catch (error: any) {
-    if (error.status === 404) {
-      throw new Error(`File not found: ${path}`);
-    }
-    throw error;
+  const { data } = await octokit.rest.repos.getContent({
+    owner,
+    repo,
+    path,
+  });
+
+  if ('content' in data) {
+    return Buffer.from(data.content, 'base64').toString('utf-8');
   }
+
+  throw new Error('File not found or is a directory');
 }
 
 export async function writeFile(
@@ -49,7 +44,7 @@ export async function writeFile(
   message: string
 ): Promise<void> {
   const octokit = await createGitHubClient(token);
-  
+
   try {
     // Try to get existing file to get its SHA
     const { data: existingFile } = await octokit.repos.getContent({
@@ -89,10 +84,11 @@ export async function listFiles(
   token: string,
   owner: string,
   repo: string,
-  path: string = ""
+  path: string = ''
 ): Promise<any[]> {
-  const octokit = await createGitHubClient(token);
-  const { data } = await octokit.repos.getContent({
+  const octokit = new Octokit({ auth: token });
+
+  const { data } = await octokit.rest.repos.getContent({
     owner,
     repo,
     path,
@@ -101,5 +97,6 @@ export async function listFiles(
   if (Array.isArray(data)) {
     return data;
   }
+
   return [];
 }

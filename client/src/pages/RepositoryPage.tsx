@@ -1,5 +1,69 @@
+
+function RepositoryFiles({ projectId }: { projectId: string }) {
+  const { data: files, isLoading } = useQuery({
+    queryKey: ["/api/github/files", projectId],
+    refetchInterval: 10000, // Refresh every 10 seconds
+  });
+
+  if (isLoading) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <FolderTree className="h-5 w-5" />
+            Repository Files
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+            <Loader2 className="h-4 w-4 animate-spin" />
+            <span>Loading files...</span>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2">
+          <FolderTree className="h-5 w-5" />
+          Repository Files
+        </CardTitle>
+        <CardDescription>
+          {files?.length || 0} items in repository
+        </CardDescription>
+      </CardHeader>
+      <CardContent>
+        {files && files.length > 0 ? (
+          <div className="space-y-1">
+            {files.map((file: any) => (
+              <div key={file.sha} className="flex items-center gap-2 p-2 rounded hover:bg-muted text-sm">
+                {file.type === 'dir' ? (
+                  <Folder className="h-4 w-4 text-blue-500" />
+                ) : (
+                  <FileText className="h-4 w-4 text-muted-foreground" />
+                )}
+                <span>{file.name}</span>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+            <File className="h-4 w-4" />
+            <span>No files found in repository</span>
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
+
 import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
+import { FileText, Folder, ChevronRight, ChevronDown } from "lucide-react";
 import { useParams } from "wouter";
 import { Github, Link2, Unlink, Loader2, FolderTree, File } from "lucide-react";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
@@ -266,25 +330,7 @@ export default function RepositoryPage() {
             </CardContent>
           </Card>
 
-          {project.githubRepoName && (
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <FolderTree className="h-5 w-5" />
-                  Repository Files
-                </CardTitle>
-                <CardDescription>
-                  AI can read and modify files in this repository
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                  <File className="h-4 w-4" />
-                  <span>Files will appear here once AI starts working</span>
-                </div>
-              </CardContent>
-            </Card>
-          )}
+          {project.githubRepoName && <RepositoryFiles projectId={projectId!} />}
         </div>
       )}
     </div>

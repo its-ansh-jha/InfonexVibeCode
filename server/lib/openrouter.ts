@@ -65,7 +65,8 @@ function parseToolCalls(content: string): ToolCall[] {
   const tools: ToolCall[] = [];
   
   // Match tool call patterns like: [tool:write_file]{"path":"...","content":"..."}
-  const toolPattern = /\[tool:(\w+)\](\{[^}]+\})/g;
+  // Use a more robust pattern that handles nested braces
+  const toolPattern = /\[tool:(\w+)\](\{(?:[^{}]|\{[^}]*\})*\})/g;
   let match;
 
   while ((match = toolPattern.exec(content)) !== null) {
@@ -75,6 +76,9 @@ function parseToolCalls(content: string): ToolCall[] {
       tools.push({ name: toolName, arguments: args });
     } catch (e) {
       console.error("Failed to parse tool call:", e);
+      // Try to extract tool name at least
+      const toolName = match[1];
+      console.error(`Tool: ${toolName}, Raw args: ${match[2]}`);
     }
   }
 

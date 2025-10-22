@@ -112,11 +112,16 @@ You have access to the following tools:
 - configure_run_button: Set the command to run the application
 - run_app: Execute the configured run command
 
+IMPORTANT RULES:
+1. All files you create/edit are automatically saved to the connected GitHub repository
+2. When configuring web servers, ALWAYS use port 3000 (the E2B sandbox uses port 3000)
+3. Use 0.0.0.0 as the host when binding ports to make them accessible
+
 When using tools, format them as: [tool:tool_name]{"arg1":"value1","arg2":"value2"}
 
 For example:
-[tool:write_file]{"path":"src/index.js","content":"console.log('Hello World');"}
-[tool:configure_run_button]{"command":"node src/index.js"}
+[tool:write_file]{"path":"server.js","content":"const express = require('express');\nconst app = express();\napp.listen(3000, '0.0.0.0', () => console.log('Server running on port 3000'));"}
+[tool:configure_run_button]{"command":"node server.js"}
 [tool:run_app]{}
 
 Always explain what you're doing and provide helpful context to the user.`;

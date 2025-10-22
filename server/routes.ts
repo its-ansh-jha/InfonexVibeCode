@@ -6,6 +6,7 @@ import { chatWithAI, SYSTEM_PROMPT } from "./lib/openrouter";
 import { listRepositories, writeFile, getFileContent } from "./lib/github";
 import { webSearch } from "./lib/serper";
 import { insertProjectSchema, insertMessageSchema } from "@shared/schema";
+import { encryptToken, decryptToken } from "./lib/encryption";
 
 // Simple in-memory E2B sandbox tracking (in production, use database)
 const sandboxes = new Map<string, { sandboxId: string; url: string; running: boolean; logs: string[] }>();
@@ -101,9 +102,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const { githubToken, repoFullName } = req.body;
       
-      // Note: In production, encrypt githubToken before storing
-      // For now, we acknowledge this limitation in comments
-      let updateData: any = { githubToken }; // TODO: Encrypt token with KMS or secrets vault
+      // Encrypt the GitHub token before storing in database
+      const encryptedToken = encryptToken(githubToken);
+      let updateData: any = { githubToken: encryptedToken };
 
       if (repoFullName) {
         const [owner, repo] = repoFullName.split("/");
@@ -158,7 +159,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ error: "GitHub not connected" });
       }
 
-      const repos = await listRepositories(project.githubToken);
+      const decryptedToken = decryptToken(project.githubToken);
+      const repos = await listRepositories(decryptedToken);
       res.json(repos);
     } catch (error: any) {
       res.status(500).json({ error: error.message });
@@ -224,8 +226,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
               case "write_file":
                 if (project.githubToken && project.githubOwner && project.githubRepoName) {
                   const [, repo] = project.githubRepoName.split("/");
+                  const decryptedToken = decryptToken(project.githubToken);
                   await writeFile(
-                    project.githubToken,
+                    decryptedToken,
                     project.githubOwner,
                     repo,
                     tool.arguments.path,
@@ -241,8 +244,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
               case "edit_file":
                 if (project.githubToken && project.githubOwner && project.githubRepoName) {
                   const [, repo] = project.githubRepoName.split("/");
+                  const decryptedToken = decryptToken(project.githubToken);
                   const existing = await getFileContent(
-                    project.githubToken,
+                    decryptedToken,
                     project.githubOwner,
                     repo,
                     tool.arguments.path
@@ -252,7 +256,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
                     tool.arguments.replace
                   );
                   await writeFile(
-                    project.githubToken,
+                    decryptedToken,
                     project.githubOwner,
                     repo,
                     tool.arguments.path,

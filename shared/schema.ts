@@ -22,7 +22,7 @@ export const projects = pgTable("projects", {
   githubRepoUrl: text("github_repo_url"),
   githubRepoName: text("github_repo_name"),
   githubOwner: text("github_owner"),
-  githubToken: text("github_token"), // TODO: Encrypt with KMS or secrets vault in production
+  githubToken: text("github_token"), // Encrypted with AES-256-GCM before storage
   runCommand: text("run_command"),
   sandboxId: text("sandbox_id"),
   createdAt: timestamp("created_at").defaultNow().notNull(),

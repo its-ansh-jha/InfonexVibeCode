@@ -1,6 +1,6 @@
 // Firebase configuration - referenced from firebase_barebones_javascript blueprint
 import { initializeApp } from "firebase/app";
-import { getAuth, GoogleAuthProvider, signInWithRedirect, signOut, onAuthStateChanged, type User } from "firebase/auth";
+import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged, type User } from "firebase/auth";
 
 const firebaseConfig = {
   apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
@@ -15,7 +15,7 @@ export const auth = getAuth(app);
 export const googleProvider = new GoogleAuthProvider();
 
 // Auth helpers
-export const signInWithGoogle = () => signInWithRedirect(auth, googleProvider);
+export const signInWithGoogle = () => signInWithPopup(auth, googleProvider);
 export const signOutUser = () => signOut(auth);
 export const onAuthChange = (callback: (user: User | null) => void) => 
   onAuthStateChanged(auth, callback);

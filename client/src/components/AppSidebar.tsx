@@ -13,7 +13,7 @@ import {
 } from "@/components/ui/sidebar";
 import { useLocation } from "wouter";
 import { signOutUser } from "@/lib/firebase";
-import { useAuth } from "@/contexts/AuthContext";
+import { useAuth } from "@/hooks/useAuth";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 

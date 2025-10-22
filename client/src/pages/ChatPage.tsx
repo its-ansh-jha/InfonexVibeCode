@@ -15,6 +15,7 @@ import { formatDistanceToNow } from "date-fns";
 
 interface ToolCall {
   name: string;
+  summary?: string;
   status: string;
 }
 
@@ -131,7 +132,7 @@ export default function ChatPage() {
                         {toolCalls.map((tool, idx) => (
                           <Badge key={idx} variant="outline" className="gap-1.5">
                             <Wrench className="h-3 w-3" />
-                            <span className="font-mono text-xs">{tool.name}</span>
+                            <span className="text-xs">{tool.summary || tool.name}</span>
                             {tool.status === "success" && (
                               <span className="text-chart-2">✓</span>
                             )}

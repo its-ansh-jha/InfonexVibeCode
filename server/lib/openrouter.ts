@@ -85,6 +85,24 @@ function parseToolCalls(content: string): ToolCall[] {
   return tools;
 }
 
+// Generate a human-readable summary for tool calls
+export function getToolCallSummary(toolName: string, args: Record<string, any>): string {
+  switch (toolName) {
+    case "write_file":
+      return `Create file ${args.path}`;
+    case "edit_file":
+      return `Edit file ${args.path}`;
+    case "serper_web_search":
+      return `Search: ${args.query}`;
+    case "configure_run_button":
+      return `Configure run: ${args.command}`;
+    case "run_app":
+      return "Run application";
+    default:
+      return toolName;
+  }
+}
+
 export const SYSTEM_PROMPT = `You are an AI coding assistant integrated into Vibe Code, a platform for AI-powered development.
 
 You have access to the following tools:

@@ -2,7 +2,7 @@ import type { Express, Request } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { requireAuth } from "./middleware/auth";
-import { chatWithAI, SYSTEM_PROMPT } from "./lib/openrouter";
+import { chatWithAI, SYSTEM_PROMPT, getToolCallSummary } from "./lib/openrouter";
 import { listRepositories, writeFile, getFileContent, listFiles } from "./lib/github";
 import { webSearch } from "./lib/serper";
 import { insertProjectSchema, insertMessageSchema } from "@shared/schema";
@@ -248,6 +248,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         for (const tool of aiResponse.toolCalls) {
           try {
             let result;
+            const summary = getToolCallSummary(tool.name, tool.arguments);
             
             switch (tool.name) {
               case "write_file":
@@ -316,9 +317,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
                 result = { status: "error", message: `Unknown tool: ${tool.name}` };
             }
 
-            toolResults.push({ name: tool.name, ...result });
+            toolResults.push({ name: tool.name, summary, ...result });
           } catch (error: any) {
-            toolResults.push({ name: tool.name, status: "error", message: error.message });
+            const summary = getToolCallSummary(tool.name, tool.arguments);
+            toolResults.push({ name: tool.name, summary, status: "error", message: error.message });
           }
         }
       }

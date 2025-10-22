@@ -22,9 +22,9 @@ export default function LoginPage() {
         </CardHeader>
         <CardContent className="space-y-6">
           <div className="space-y-2 text-center">
-            <CardTitle className="text-xl">Welcome back</CardTitle>
+            <CardTitle className="text-xl">Get Started</CardTitle>
             <CardDescription>
-              Sign in to start building with AI
+              Sign in or sign up to start building with AI
             </CardDescription>
           </div>
           <Button

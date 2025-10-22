@@ -19,6 +19,15 @@ Vibe Code is an AI-powered coding platform that allows users to create, edit, an
 - **Dark/Light Mode**: Theme toggle with localStorage persistence
 - **PostgreSQL Database**: Persistent data storage
 
+## Security
+
+### GitHub Token Encryption
+- All GitHub personal access tokens are encrypted using **AES-256-GCM** before being stored in the database
+- Encryption key is managed via the `GITHUB_TOKEN_ENCRYPTION_KEY` environment variable
+- Tokens are only decrypted in-memory when needed for GitHub API calls
+- Uses authenticated encryption to prevent tampering
+- Implementation in `server/lib/encryption.ts`
+
 ## Architecture
 
 ### Frontend (React + TypeScript)
@@ -73,6 +82,7 @@ Vibe Code is an AI-powered coding platform that allows users to create, edit, an
 - `E2B_API_KEY`: E2B sandbox API key
 - `SERPER_API_KEY`: Serper web search API key
 - `DATABASE_URL`: PostgreSQL connection string
+- `GITHUB_TOKEN_ENCRYPTION_KEY`: 32-byte hex key for GitHub token encryption (AES-256-GCM)
 
 ## User Flow
 1. **Sign In**: User signs in with Google via Firebase
@@ -96,6 +106,11 @@ Vibe Code is an AI-powered coding platform that allows users to create, edit, an
 - **Interactions**: Subtle hover elevations, smooth transitions
 
 ## Recent Changes
+- **October 22, 2025**: Implemented AES-256-GCM encryption for GitHub tokens
+  - Created encryption module (`server/lib/encryption.ts`) using crypto library
+  - GitHub tokens now encrypted before database storage, decrypted only when needed
+  - Added `GITHUB_TOKEN_ENCRYPTION_KEY` environment variable for key management
+  - Updated all API routes to encrypt/decrypt tokens appropriately
 - Initial implementation complete
 - Firebase authentication integrated
 - PostgreSQL database schema deployed

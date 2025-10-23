@@ -150,9 +150,9 @@ export default function ChatPage() {
   }
 
   return (
-    <div className="flex flex-col h-full">
+    <div className="flex flex-col h-full overflow-hidden">
       {/* Messages Area */}
-      <div className="flex-1 overflow-y-auto p-4 md:p-6 space-y-6 pb-40 md:pb-6">
+      <div className="flex-1 overflow-y-auto overflow-x-hidden p-4 md:p-6 space-y-6 pb-40 md:pb-6">
         {messages && messages.length === 0 && !streamingMessage ? (
           <div className="flex flex-col items-center justify-center h-full text-center max-w-md mx-auto">
             <div className="flex items-center justify-center w-16 h-16 rounded-full bg-primary/10 mb-4">
@@ -196,10 +196,10 @@ export default function ChatPage() {
                     isUser && "flex flex-col items-end"
                   )}>
                     <Card className={cn(
-                      "p-4",
+                      "p-4 overflow-hidden",
                       isUser ? "bg-primary text-primary-foreground" : "bg-card"
                     )}>
-                      <p className="whitespace-pre-wrap break-words">{message.content}</p>
+                      <p className="whitespace-pre-wrap break-words word-break-break-word overflow-wrap-anywhere">{message.content}</p>
                     </Card>
                     {toolCalls && toolCalls.length > 0 && (
                       <div className="flex flex-wrap gap-2">
@@ -234,9 +234,9 @@ export default function ChatPage() {
                   <Bot className="h-5 w-5 text-primary" />
                 </div>
                 <div className="flex-1 max-w-3xl space-y-2">
-                  <Card className="p-4 bg-card">
+                  <Card className="p-4 bg-card overflow-hidden">
                     {streamingMessage ? (
-                      <p className="whitespace-pre-wrap break-words">{streamingMessage}</p>
+                      <p className="whitespace-pre-wrap break-words word-break-break-word overflow-wrap-anywhere">{streamingMessage}</p>
                     ) : (
                       <div className="flex items-center gap-2">
                         <Loader2 className="h-4 w-4 animate-spin" />

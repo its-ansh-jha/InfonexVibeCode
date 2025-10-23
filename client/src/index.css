@@ -276,6 +276,15 @@
     pointer-events: none;
   }
 
+  /* Force word wrapping for long content */
+  .word-break-break-word {
+    word-break: break-word;
+  }
+
+  .overflow-wrap-anywhere {
+    overflow-wrap: anywhere;
+  }
+
   /* .no-default-hover-elevate/no-default-active-elevate is an escape hatch so consumers of
    * buttons/badges can remove the automatic brightness adjustment on interactions
    * and program their own. */

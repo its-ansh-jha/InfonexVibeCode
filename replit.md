@@ -6,15 +6,19 @@ Vibe Code is an AI-powered app building platform that allows users to create app
 ## Features
 - **Firebase Authentication**: Google sign-in for user management
 - **Project Management**: Create and manage multiple app projects
-- **AI Chat Agent**: Powered by Google's Gemini 2.5 Flash Preview (09-2025) model with streaming responses
+- **Advanced AI Chat Agent**: 
+  - **Dual Model System**: Intelligent auto-switching between Gemini 2.5 Flash (fast) and Gemini 2.5 Pro (complex coding tasks)
+  - Automatic model selection based on task complexity
+  - Streaming responses with live tool execution feedback
 - **AWS S3 Storage**: Secure file storage for all project files
 - **E2B Sandbox Integration**: Real-time code execution and preview in isolated sandboxes
-- **AI Tools**:
+- **Advanced AI Tools**:
   - `write_file`: Create or update files (saved to S3 and E2B sandbox)
   - `edit_file`: Edit specific parts of existing files
-  - `run_shell`: Execute shell commands in E2B sandbox
+  - `delete_file`: Delete files from S3, E2B sandbox, and database with accurate status reporting
+  - `run_shell`: Execute shell commands with support for long-running processes (servers, npm run dev)
   - `run_code`: Run Python/JavaScript code in E2B code interpreter
-  - `serper_web_search`: Search the web for information
+  - `serper_web_search`: Proactive web search during operations for documentation and best practices
 - **Streaming Responses**: Real-time AI responses with live tool execution feedback
 - **Simplified Chat Display**: Shows tool summaries (e.g., "Created index.html") instead of full code
 - **Mobile-Friendly**: Responsive design with bottom tab navigation on mobile
@@ -33,10 +37,14 @@ Vibe Code is an AI-powered app building platform that allows users to create app
 
 ### Backend (Express + TypeScript)
 - **Database**: PostgreSQL with Drizzle ORM
-- **AI Integration**: Official Google Gemini API (gemini-2.5-flash-preview-09-2025 model) with streaming
+- **AI Integration**: 
+  - Dual Google Gemini models with intelligent selection:
+    - **gemini-2.5-flash-preview-09-2025**: For quick responses and simple tasks
+    - **gemini-2.5-pro-latest**: Auto-selected for complex coding tasks (portfolios, apps, backends, etc.)
+  - Streaming responses via SSE
 - **File Storage**: AWS S3 for persistent file storage
 - **Code Execution**: E2B Code Interpreter SDK
-- **Web Search**: Serper API
+- **Web Search**: Serper API with proactive integration
 - **Sandbox**: E2B SDK with real code execution and preview
 
 ### Database Schema
@@ -61,7 +69,7 @@ Vibe Code is an AI-powered app building platform that allows users to create app
 - `GET /api/files/:projectId`: List project files
 - `GET /api/files/:projectId/:fileId`: Get file content from S3
 - `POST /api/files`: Create/update file (saves to S3 and E2B sandbox)
-- `DELETE /api/files/:fileId`: Delete file from S3 and database
+- `DELETE /api/files/:fileId`: Delete file from S3, E2B sandbox, and database with comprehensive status reporting
 
 ### E2B Sandbox
 - `POST /api/sandbox/:projectId/execute`: Execute code in sandbox
@@ -107,7 +115,26 @@ Vibe Code is an AI-powered app building platform that allows users to create app
 - **Interactions**: Subtle hover elevations, smooth transitions
 
 ## Recent Changes
-- **October 23, 2025** (Latest Session): Critical fixes and workflow automation
+- **October 23, 2025** (Latest Session): Advanced AI Platform Enhancements
+  - **Dual Gemini Model System**:
+    - Added intelligent model selection between Flash (fast) and Pro (complex coding)
+    - Auto-switches to Pro for tasks like "create portfolio website", "build app", "implement backend"
+    - Automatic detection based on task complexity, message length, and keywords
+  - **Enhanced File Management**:
+    - `delete_file` tool now removes files from all three locations: S3, E2B sandbox, and database
+    - Accurate status reporting with detailed error messages for each deletion step
+    - Partial deletion handling with clear feedback when operations fail
+  - **Advanced Shell Command Execution**:
+    - Automatic detection of long-running server commands (npm run dev, python servers, etc.)
+    - Background execution for servers without blocking AI responses
+    - Command results automatically forwarded back to AI for context
+    - Workflow command auto-save for sandbox recreation
+  - **Proactive Web Search Integration**:
+    - System prompt updated to emphasize using Serper during operations (not after)
+    - AI can search for documentation, libraries, and best practices while building
+    - More accurate and capable AI responses with real-time information access
+    
+- **October 23, 2025** (Earlier): Critical fixes and workflow automation
   - **Chat Scrolling Fixed**: Removed fixed positioning on input area that was preventing message scrolling
   - **AI Streaming Improvements**:
     - Server commands (npm run dev, python servers) now run in background without blocking AI stream

@@ -90,19 +90,38 @@ export async function* chatWithAIStream(
 function parseToolCalls(content: string): ToolCall[] {
   const tools: ToolCall[] = [];
 
-  // Match tool call patterns like: [tool:write_file]{"path":"...","content":"..."}
-  const toolPattern = /\[tool:(\w+)\](\{(?:[^{}]|\{[^}]*\})*\})/g;
+  // Match tool call patterns like: [tool:write_file]{...}
+  // Use a more permissive regex that captures until the next [tool: or end of string
+  const toolPattern = /\[tool:(\w+)\](\{[\s\S]*?)(?=\[tool:|$)/g;
   let match;
 
   while ((match = toolPattern.exec(content)) !== null) {
     try {
       const toolName = match[1];
-      const args = JSON.parse(match[2]);
+      let jsonStr = match[2].trim();
+      
+      // Try to find the complete JSON object by counting braces
+      let braceCount = 0;
+      let jsonEnd = 0;
+      for (let i = 0; i < jsonStr.length; i++) {
+        if (jsonStr[i] === '{') braceCount++;
+        if (jsonStr[i] === '}') braceCount--;
+        if (braceCount === 0 && i > 0) {
+          jsonEnd = i + 1;
+          break;
+        }
+      }
+      
+      if (jsonEnd > 0) {
+        jsonStr = jsonStr.substring(0, jsonEnd);
+      }
+      
+      const args = JSON.parse(jsonStr);
       tools.push({ name: toolName, arguments: args });
     } catch (e) {
       console.error("Failed to parse tool call:", e);
       const toolName = match[1];
-      console.error(`Tool: ${toolName}, Raw args: ${match[2]}`);
+      console.error(`Tool: ${toolName}, Raw args: ${match[2].substring(0, 500)}...`);
     }
   }
 

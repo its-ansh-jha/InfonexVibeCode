@@ -227,11 +227,11 @@ export default function ProjectsPage() {
                 )}
               </CardHeader>
               <CardContent className="space-y-3">
-                {project.githubRepoName && (
+                {project.sandboxId && (
                   <div className="flex items-center gap-2 text-sm text-muted-foreground">
                     <FolderGit2 className="h-4 w-4" />
                     <span className="font-mono text-xs truncate">
-                      {project.githubRepoName}
+                      Sandbox: {project.sandboxId}
                     </span>
                   </div>
                 )}

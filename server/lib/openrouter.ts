@@ -1,4 +1,4 @@
-// Enhanced OpenRouter AI integration with multi-model support
+// OpenRouter AI integration for GLM-4.5-air model
 interface Message {
   role: "user" | "assistant" | "system";
   content: string;
@@ -12,22 +12,6 @@ interface ToolCall {
 interface ChatResponse {
   content: string;
   toolCalls?: ToolCall[];
-}
-
-// Available AI models with different capabilities
-export enum AIModel {
-  CLAUDE_SONNET = "anthropic/claude-3.5-sonnet", // Best for complex coding tasks
-  CLAUDE_HAIKU = "anthropic/claude-3-haiku", // Fast, cost-effective
-  GPT4_TURBO = "openai/gpt-4-turbo", // Strong general purpose
-  GPT4O = "openai/gpt-4o", // Latest GPT-4 with vision
-  DEEPSEEK_CODER = "deepseek/deepseek-coder", // Specialized for code
-  GLM_FREE = "z-ai/glm-4.5-air:free", // Free tier (current default)
-}
-
-interface AIConfig {
-  model: AIModel;
-  temperature?: number;
-  maxTokens?: number;
 }
 
 export async function chatWithAI(

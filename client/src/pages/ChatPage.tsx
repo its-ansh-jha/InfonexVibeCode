@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useParams } from "wouter";
-import { Send, Bot, User as UserIcon, Loader2, Wrench, FileCode, Terminal, Play } from "lucide-react";
+import { Send, Bot, User as UserIcon, Loader2, Wrench, FileCode, Terminal, Play, Copy, Check, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Card } from "@/components/ui/card";
@@ -21,6 +21,99 @@ interface ToolCall {
   result?: any;
 }
 
+function CodeBlock({ code, language = "javascript" }: { code: string; language?: string }) {
+  const [copied, setCopied] = useState(false);
+
+  const handleCopy = () => {
+    navigator.clipboard.writeText(code);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
+  return (
+    <div className="relative group my-3">
+      <div className="flex items-center justify-between px-4 py-2 bg-muted/50 border border-border rounded-t-lg">
+        <span className="text-xs font-mono text-muted-foreground uppercase">{language}</span>
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={handleCopy}
+          className="h-6 px-2 text-xs opacity-0 group-hover:opacity-100 transition-opacity"
+        >
+          {copied ? (
+            <>
+              <Check className="h-3 w-3 mr-1" />
+              Copied
+            </>
+          ) : (
+            <>
+              <Copy className="h-3 w-3 mr-1" />
+              Copy
+            </>
+          )}
+        </Button>
+      </div>
+      <pre className="overflow-x-auto rounded-b-lg border border-t-0 border-border bg-muted/30 p-4 text-sm">
+        <code className="font-mono text-xs sm:text-sm">{code}</code>
+      </pre>
+    </div>
+  );
+}
+
+function MessageContent({ content }: { content: string }) {
+  // Parse code blocks from content
+  const parts: Array<{ type: 'text' | 'code'; content: string; language?: string }> = [];
+  
+  // Match code blocks with ```language\ncode\n``` format
+  const codeBlockRegex = /```(\w+)?\n([\s\S]*?)```/g;
+  let lastIndex = 0;
+  let match;
+
+  while ((match = codeBlockRegex.exec(content)) !== null) {
+    // Add text before code block
+    if (match.index > lastIndex) {
+      parts.push({
+        type: 'text',
+        content: content.slice(lastIndex, match.index)
+      });
+    }
+    
+    // Add code block
+    parts.push({
+      type: 'code',
+      content: match[2].trim(),
+      language: match[1] || 'code'
+    });
+    
+    lastIndex = match.index + match[0].length;
+  }
+  
+  // Add remaining text
+  if (lastIndex < content.length) {
+    parts.push({
+      type: 'text',
+      content: content.slice(lastIndex)
+    });
+  }
+
+  // If no code blocks found, return plain text
+  if (parts.length === 0) {
+    return <p className="whitespace-pre-wrap break-words leading-relaxed">{content}</p>;
+  }
+
+  return (
+    <div className="space-y-2">
+      {parts.map((part, idx) => (
+        part.type === 'code' ? (
+          <CodeBlock key={idx} code={part.content} language={part.language} />
+        ) : (
+          <p key={idx} className="whitespace-pre-wrap break-words leading-relaxed">{part.content}</p>
+        )
+      ))}
+    </div>
+  );
+}
+
 export default function ChatPage() {
   const { id: projectId } = useParams();
   const { user } = useAuth();
@@ -30,6 +123,7 @@ export default function ChatPage() {
   const [streamingMessage, setStreamingMessage] = useState("");
   const [streamingTools, setStreamingTools] = useState<ToolCall[]>([]);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   const { data: messages, isLoading } = useQuery<Message[]>({
     queryKey: ["/api/messages", projectId],
@@ -39,6 +133,14 @@ export default function ChatPage() {
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, streamingMessage]);
+
+  // Auto-resize textarea
+  useEffect(() => {
+    if (textareaRef.current) {
+      textareaRef.current.style.height = 'auto';
+      textareaRef.current.style.height = Math.min(textareaRef.current.scrollHeight, 128) + 'px';
+    }
+  }, [input]);
 
   const handleSend = async () => {
     if (!input.trim() || isStreaming) return;
@@ -141,6 +243,12 @@ export default function ChatPage() {
     return <Wrench className="h-3 w-3" />;
   };
 
+  const getToolVariant = (toolName: string): "default" | "secondary" | "destructive" | "outline" => {
+    if (toolName === 'write_file' || toolName === 'edit_file') return 'default';
+    if (toolName === 'run_shell') return 'secondary';
+    return 'outline';
+  };
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-full">
@@ -152,25 +260,37 @@ export default function ChatPage() {
   return (
     <div className="flex flex-col h-full overflow-hidden">
       {/* Messages Area */}
-      <div className="flex-1 overflow-y-auto overflow-x-hidden p-4 md:p-6 space-y-6 pb-40 md:pb-6">
+      <div className="flex-1 overflow-y-auto overflow-x-hidden p-3 sm:p-4 md:p-6 space-y-4 sm:space-y-6 pb-32 sm:pb-40 md:pb-6">
         {messages && messages.length === 0 && !streamingMessage ? (
-          <div className="flex flex-col items-center justify-center h-full text-center max-w-md mx-auto">
-            <div className="flex items-center justify-center w-16 h-16 rounded-full bg-primary/10 mb-4">
-              <Bot className="h-8 w-8 text-primary" />
+          <div className="flex flex-col items-center justify-center h-full text-center max-w-md mx-auto px-4">
+            <div className="flex items-center justify-center w-16 h-16 sm:w-20 sm:h-20 rounded-full bg-gradient-to-br from-primary/20 to-primary/5 mb-4 animate-in fade-in zoom-in duration-300">
+              <Sparkles className="h-8 w-8 sm:h-10 sm:w-10 text-primary" />
             </div>
-            <h3 className="text-xl font-semibold mb-2">Start Building with AI</h3>
-            <p className="text-muted-foreground mb-6">
+            <h3 className="text-xl sm:text-2xl font-semibold mb-2">Start Building with AI</h3>
+            <p className="text-sm sm:text-base text-muted-foreground mb-6">
               Tell the AI what app you want to build. Files are stored in S3 and run in E2B sandbox.
             </p>
-            <div className="flex flex-wrap gap-2 justify-center">
-              <Badge variant="secondary" className="text-xs">Create files</Badge>
-              <Badge variant="secondary" className="text-xs">Run code</Badge>
-              <Badge variant="secondary" className="text-xs">Execute commands</Badge>
-              <Badge variant="secondary" className="text-xs">Search web</Badge>
+            <div className="grid grid-cols-2 gap-2 w-full max-w-xs">
+              <Badge variant="secondary" className="text-xs py-2 justify-center hover:bg-secondary/80 transition-colors">
+                <FileCode className="h-3 w-3 mr-1" />
+                Create files
+              </Badge>
+              <Badge variant="secondary" className="text-xs py-2 justify-center hover:bg-secondary/80 transition-colors">
+                <Play className="h-3 w-3 mr-1" />
+                Run code
+              </Badge>
+              <Badge variant="secondary" className="text-xs py-2 justify-center hover:bg-secondary/80 transition-colors">
+                <Terminal className="h-3 w-3 mr-1" />
+                Execute commands
+              </Badge>
+              <Badge variant="secondary" className="text-xs py-2 justify-center hover:bg-secondary/80 transition-colors">
+                <Sparkles className="h-3 w-3 mr-1" />
+                Search web
+              </Badge>
             </div>
           </div>
         ) : (
-          <div className="max-w-4xl mx-auto space-y-6">
+          <div className="max-w-4xl mx-auto space-y-4 sm:space-y-6">
             {messages?.map((message) => {
               const isUser = message.role === "user";
               const toolCalls = message.toolCalls as ToolCall[] | null;
@@ -179,47 +299,51 @@ export default function ChatPage() {
                 <div
                   key={message.id}
                   className={cn(
-                    "flex gap-4 max-w-full",
+                    "flex gap-2 sm:gap-4 max-w-full animate-in fade-in slide-in-from-bottom-2 duration-300",
                     isUser ? "justify-end" : "justify-start"
                   )}
                   data-testid={`message-${message.role}`}
                 >
                   {!isUser && (
-                    <div className="flex items-start">
-                      <div className="flex items-center justify-center w-9 h-9 rounded-full bg-primary/10">
-                        <Bot className="h-5 w-5 text-primary" />
+                    <div className="flex items-start shrink-0">
+                      <div className="flex items-center justify-center w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-gradient-to-br from-primary/20 to-primary/5">
+                        <Bot className="h-4 w-4 sm:h-5 sm:w-5 text-primary" />
                       </div>
                     </div>
                   )}
                   <div className={cn(
-                    "flex-1 space-y-2 min-w-0",
+                    "flex-1 space-y-2 min-w-0 max-w-[85%] sm:max-w-full",
                     isUser && "flex flex-col items-end"
                   )}>
                     <Card className={cn(
-                      "p-4 overflow-hidden max-w-full",
+                      "p-3 sm:p-4 overflow-hidden max-w-full shadow-sm hover:shadow-md transition-shadow",
                       isUser ? "bg-primary text-primary-foreground" : "bg-card"
                     )}>
-                      <p className="whitespace-pre-wrap break-words word-break-break-word overflow-wrap-anywhere max-w-full">{message.content}</p>
+                      <MessageContent content={message.content} />
                     </Card>
                     {toolCalls && toolCalls.length > 0 && (
-                      <div className="flex flex-wrap gap-2">
+                      <div className="flex flex-wrap gap-1.5 sm:gap-2">
                         {toolCalls.map((tool, idx) => (
-                          <Badge key={idx} variant="outline" className="gap-1.5">
+                          <Badge 
+                            key={idx} 
+                            variant={getToolVariant(tool.name)} 
+                            className="gap-1.5 text-[10px] sm:text-xs py-1 px-2"
+                          >
                             {getToolIcon(tool.name)}
-                            <span className="text-xs">{tool.summary || tool.name}</span>
-                            <span className="text-chart-2">✓</span>
+                            <span className="truncate max-w-[120px] sm:max-w-none">{tool.summary || tool.name}</span>
+                            <Check className="h-2.5 w-2.5 sm:h-3 sm:w-3 text-chart-2" />
                           </Badge>
                         ))}
                       </div>
                     )}
-                    <p className="text-xs text-muted-foreground">
+                    <p className="text-[10px] sm:text-xs text-muted-foreground px-1">
                       {formatDistanceToNow(new Date(message.createdAt), { addSuffix: true })}
                     </p>
                   </div>
                   {isUser && (
-                    <div className="flex items-start">
-                      <div className="flex items-center justify-center w-9 h-9 rounded-full bg-muted">
-                        <UserIcon className="h-5 w-5" />
+                    <div className="flex items-start shrink-0">
+                      <div className="flex items-center justify-center w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-muted">
+                        <UserIcon className="h-4 w-4 sm:h-5 sm:w-5" />
                       </div>
                     </div>
                   )}
@@ -229,28 +353,32 @@ export default function ChatPage() {
             
             {/* Streaming Message */}
             {isStreaming && (
-              <div className="flex gap-4 justify-start max-w-full">
-                <div className="flex items-center justify-center w-9 h-9 rounded-full bg-primary/10">
-                  <Bot className="h-5 w-5 text-primary" />
+              <div className="flex gap-2 sm:gap-4 justify-start max-w-full animate-in fade-in slide-in-from-bottom-2 duration-300">
+                <div className="flex items-center justify-center w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-gradient-to-br from-primary/20 to-primary/5 shrink-0">
+                  <Bot className="h-4 w-4 sm:h-5 sm:w-5 text-primary" />
                 </div>
-                <div className="flex-1 space-y-2 min-w-0">
-                  <Card className="p-4 bg-card overflow-hidden max-w-full">
+                <div className="flex-1 space-y-2 min-w-0 max-w-[85%] sm:max-w-full">
+                  <Card className="p-3 sm:p-4 bg-card overflow-hidden max-w-full shadow-sm">
                     {streamingMessage ? (
-                      <p className="whitespace-pre-wrap break-words word-break-break-word overflow-wrap-anywhere max-w-full">{streamingMessage}</p>
+                      <MessageContent content={streamingMessage} />
                     ) : (
                       <div className="flex items-center gap-2">
                         <Loader2 className="h-4 w-4 animate-spin" />
-                        <span className="text-muted-foreground">AI is thinking...</span>
+                        <span className="text-sm text-muted-foreground">AI is thinking...</span>
                       </div>
                     )}
                   </Card>
                   {streamingTools.length > 0 && (
-                    <div className="flex flex-wrap gap-2">
+                    <div className="flex flex-wrap gap-1.5 sm:gap-2">
                       {streamingTools.map((tool, idx) => (
-                        <Badge key={idx} variant="outline" className="gap-1.5">
+                        <Badge 
+                          key={idx} 
+                          variant={getToolVariant(tool.name)} 
+                          className="gap-1.5 text-[10px] sm:text-xs py-1 px-2 animate-in fade-in zoom-in duration-200"
+                        >
                           {getToolIcon(tool.name)}
-                          <span className="text-xs">{tool.summary || tool.name}</span>
-                          <span className="text-chart-2">✓</span>
+                          <span className="truncate max-w-[120px] sm:max-w-none">{tool.summary || tool.name}</span>
+                          <Check className="h-2.5 w-2.5 sm:h-3 sm:w-3 text-chart-2" />
                         </Badge>
                       ))}
                     </div>
@@ -264,23 +392,24 @@ export default function ChatPage() {
         )}
       </div>
 
-      {/* Input Area */}
-      <div className="border-t border-border bg-card p-4 md:p-6 pb-20 md:pb-6">
-        <div className="max-w-4xl mx-auto flex gap-3">
+      {/* Input Area - Fixed at bottom on mobile */}
+      <div className="border-t border-border bg-card/95 backdrop-blur supports-[backdrop-filter]:bg-card/80 p-3 sm:p-4 md:p-6 pb-16 sm:pb-20 md:pb-6 fixed bottom-0 left-0 right-0 md:relative shadow-lg md:shadow-none">
+        <div className="max-w-4xl mx-auto flex gap-2 sm:gap-3">
           <Textarea
-            placeholder="Describe the app you want to build..."
+            ref={textareaRef}
+            placeholder="Describe what you want to build..."
             value={input}
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={handleKeyPress}
             rows={1}
-            className="min-h-[44px] max-h-32 resize-none"
+            className="min-h-[44px] max-h-32 resize-none text-sm sm:text-base"
             data-testid="input-chat-message"
           />
           <Button
             onClick={handleSend}
             disabled={!input.trim() || isStreaming}
             size="icon"
-            className="h-11 w-11 shrink-0"
+            className="h-11 w-11 shrink-0 shadow-md hover:shadow-lg transition-shadow"
             data-testid="button-send-message"
           >
             {isStreaming ? (

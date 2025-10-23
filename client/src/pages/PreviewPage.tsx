@@ -100,75 +100,76 @@ export default function PreviewPage() {
   }
 
   return (
-    <div className="flex flex-col h-full">
-      {/* Fullscreen iframe container with URL bar inside */}
-      <div className="flex-1 relative bg-background">
+    <div className="flex flex-col h-full bg-muted">
+      {/* Mobile-sized preview container */}
+      <div className="flex-1 flex items-center justify-center p-4">
         {previewUrl ? (
-          <div className="w-full h-full flex flex-col">
-            {/* URL bar inside iframe area */}
-            <div className="flex items-center gap-2 p-3 border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 z-10">
-              <Badge variant="outline" className="gap-1.5 shrink-0">
-                <div className="w-2 h-2 bg-chart-2 rounded-full animate-pulse" />
+          <div className="w-full max-w-[375px] h-full flex flex-col bg-background rounded-xl shadow-2xl overflow-hidden">
+            {/* URL bar */}
+            <div className="flex items-center gap-2 p-2 border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+              <Badge variant="outline" className="gap-1.5 shrink-0 text-xs">
+                <div className="w-1.5 h-1.5 bg-chart-2 rounded-full animate-pulse" />
                 Active
               </Badge>
               
-              <div className="flex-1 flex items-center gap-2 min-w-0">
-                <div className="flex-1 px-3 py-1.5 bg-muted rounded-md text-sm font-mono truncate">
+              <div className="flex-1 min-w-0">
+                <div className="px-2 py-1 bg-muted rounded text-xs font-mono truncate">
                   {previewUrl}
                 </div>
-                
+              </div>
+
+              <div className="flex items-center gap-1 shrink-0">
                 <Button
                   variant="ghost"
                   size="sm"
                   onClick={handleCopyUrl}
-                  className="shrink-0"
+                  className="h-7 w-7 p-0"
                   data-testid="button-copy-url"
                 >
-                  <Copy className="h-4 w-4" />
+                  <Copy className="h-3 w-3" />
                 </Button>
-              </div>
 
-              <div className="flex items-center gap-2 shrink-0">
                 <Button
                   variant="ghost"
                   size="sm"
                   onClick={handleRefresh}
                   disabled={isRefreshing}
+                  className="h-7 w-7 p-0"
                   data-testid="button-refresh-preview"
                 >
-                  <RefreshCw className={`h-4 w-4 ${isRefreshing ? 'animate-spin' : ''}`} />
+                  <RefreshCw className={`h-3 w-3 ${isRefreshing ? 'animate-spin' : ''}`} />
                 </Button>
 
                 <Button
                   variant="ghost"
                   size="sm"
                   onClick={handleDownloadSource}
+                  className="h-7 w-7 p-0"
                   data-testid="button-download-source"
                 >
-                  <Download className="h-4 w-4" />
+                  <Download className="h-3 w-3" />
                 </Button>
 
                 <Button
                   variant="ghost"
                   size="sm"
                   onClick={() => window.open(previewUrl, '_blank')}
+                  className="h-7 w-7 p-0"
                   data-testid="button-open-external"
                 >
-                  <ExternalLink className="h-4 w-4" />
+                  <ExternalLink className="h-3 w-3" />
                 </Button>
               </div>
             </div>
 
-            {/* Mobile-sized iframe preview */}
-            <div className="flex-1 bg-muted flex items-start justify-center overflow-auto p-2">
-              <div className="w-full max-w-[320px] h-full bg-background rounded-lg shadow-xl overflow-hidden">
-                <iframe
-                  src={previewUrl}
-                  className="w-full h-full border-0"
-                  title="App Preview"
-                  data-testid="iframe-preview"
-                />
-              </div>
+            {/* Mobile iframe */}
+            <div className="flex-1 overflow-hidden">
+              <iframe
+                src={previewUrl}
+                className="w-full h-full border-0"
+                title="App Preview"
+                data-testid="iframe-preview"
+              />
             </div>
           </div>
         ) : (

@@ -1,4 +1,5 @@
-import CodeInterpreter from '@e2b/code-interpreter';
+
+import { CodeInterpreter } from '@e2b/code-interpreter';
 
 const E2B_API_KEY = process.env.E2B_API_KEY!;
 
@@ -20,17 +21,13 @@ export async function createSandbox(projectId: string): Promise<SandboxInfo> {
   try {
     const sandbox = await CodeInterpreter.create({
       apiKey: E2B_API_KEY,
-      metadata: {
-        projectId,
-        createdAt: new Date().toISOString(),
-      }
     });
 
     activeSandboxes.set(projectId, sandbox);
 
     return {
-      sandboxId: sandbox.sandboxID,
-      url: `https://${sandbox.getHostname(3000)}`,
+      sandboxId: sandbox.sandboxId,
+      url: `https://${sandbox.getHost(3000)}`,
     };
   } catch (error: any) {
     throw new Error(`Failed to create E2B sandbox: ${error.message}`);
@@ -89,16 +86,12 @@ export async function executeShellCommand(
   try {
     const sandbox = await getOrCreateSandbox(projectId);
     
-    const process = await sandbox.process.start({
-      cmd: command,
-    });
-
-    await process.wait();
+    const process = await sandbox.commands.run(command);
     
     return {
-      stdout: process.output.stdout,
-      stderr: process.output.stderr,
-      exitCode: process.output.exitCode,
+      stdout: process.stdout,
+      stderr: process.stderr,
+      exitCode: process.exitCode,
     };
   } catch (error: any) {
     return {
@@ -160,5 +153,5 @@ export async function closeSandbox(projectId: string): Promise<void> {
 
 export async function getSandboxUrl(projectId: string, port: number = 3000): Promise<string> {
   const sandbox = await getOrCreateSandbox(projectId);
-  return `https://${sandbox.getHostname(port)}`;
+  return `https://${sandbox.getHost(port)}`;
 }

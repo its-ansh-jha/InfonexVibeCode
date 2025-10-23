@@ -260,7 +260,7 @@ export default function ChatPage() {
   return (
     <div className="flex flex-col h-full overflow-hidden">
       {/* Messages Area */}
-      <div className="flex-1 overflow-y-auto overflow-x-hidden p-3 sm:p-4 md:p-6 space-y-4 sm:space-y-6 pb-20 md:pb-6">
+      <div className="flex-1 overflow-y-auto overflow-x-hidden p-3 sm:p-4 md:p-6 space-y-4 sm:space-y-6 pb-32 md:pb-6">
         {messages && messages.length === 0 && !streamingMessage ? (
           <div className="flex flex-col items-center justify-center h-full text-center max-w-md mx-auto px-4">
             <div className="flex items-center justify-center w-16 h-16 sm:w-20 sm:h-20 rounded-full bg-gradient-to-br from-primary/20 to-primary/5 mb-4 animate-in fade-in zoom-in duration-300">
@@ -393,7 +393,7 @@ export default function ChatPage() {
       </div>
 
       {/* Input Area */}
-      <div className="border-t border-border bg-card p-3 sm:p-4 md:p-6">
+      <div className="border-t border-border bg-card p-3 sm:p-4 md:p-6 pb-20 md:pb-6">
         <div className="max-w-4xl mx-auto flex gap-2 sm:gap-3">
           <Textarea
             ref={textareaRef}

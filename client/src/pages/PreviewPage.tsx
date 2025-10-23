@@ -40,7 +40,7 @@ export default function PreviewPage() {
             "Authorization": `Bearer ${idToken}`,
           },
         });
-        
+
         if (response.ok) {
           const data = await response.json();
           setSandboxExpired(!data.isValid);
@@ -86,9 +86,9 @@ export default function PreviewPage() {
       const response = await fetch(`/api/files/${projectId}/download`, {
         credentials: 'include',
       });
-      
+
       if (!response.ok) throw new Error('Download failed');
-      
+
       const data = await response.json();
       const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
       const url = window.URL.createObjectURL(blob);
@@ -99,7 +99,7 @@ export default function PreviewPage() {
       a.click();
       window.URL.revokeObjectURL(url);
       document.body.removeChild(a);
-      
+
       toast({
         title: "Download started",
         description: "Source code is being downloaded",
@@ -139,15 +139,15 @@ export default function PreviewPage() {
       }
 
       const data = await response.json();
-      
+
       // Invalidate and refetch project data
       await queryClient.invalidateQueries({ queryKey: ["/api/projects", projectId] });
       await queryClient.invalidateQueries({ queryKey: ["/api/sandbox", projectId, "url"] });
       await refetchProject();
       await refetchSandbox();
-      
+
       setSandboxExpired(false);
-      
+
       toast({
         title: "Sandbox recreated",
         description: `New sandbox created with ${data.filesSynced} files synced`,
@@ -197,7 +197,7 @@ export default function PreviewPage() {
                 )} />
                 {sandboxExpired ? 'Expired' : 'Active'}
               </Badge>
-              
+
               <div className="flex-1 min-w-0">
                 <div className="px-2 py-1 bg-muted rounded text-[10px] sm:text-xs font-mono truncate">
                   {previewUrl}
@@ -222,7 +222,7 @@ export default function PreviewPage() {
                     )}
                   </Button>
                 )}
-                
+
                 <Button
                   variant="ghost"
                   size="sm"

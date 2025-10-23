@@ -269,6 +269,15 @@
     @apply hidden;
   }
 
+  /* Hide scrollbar for tabs on mobile while keeping scroll functionality */
+  .overflow-x-auto::-webkit-scrollbar {
+    display: none;
+  }
+  .overflow-x-auto {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+
   /* Placeholder styling for contentEditable div */
   [contenteditable][data-placeholder]:empty::before {
     content: attr(data-placeholder);

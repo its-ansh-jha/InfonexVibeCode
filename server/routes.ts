@@ -9,8 +9,9 @@ import { uploadFileToS3, getFileFromS3, deleteFileFromS3, deleteProjectFilesFrom
 import { 
   createSandbox, 
   executeCode, 
-  executeShellCommand, 
-  writeFileToSandbox, 
+  executeShellCommand,
+  writeFileToSandbox,
+  deleteFileFromSandbox,
   getSandboxUrl,
   closeSandbox,
   getSandboxStatus,
@@ -236,9 +237,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Delete from S3
       await deleteFileFromS3(file.s3Key);
 
+      // Delete from E2B sandbox
+      const sandboxDeletion = await deleteFileFromSandbox(file.projectId, file.path);
+
       // Delete from database
       await storage.deleteFile(req.params.fileId);
-      res.json({ success: true });
+      
+      res.json({ 
+        success: true, 
+        deleted: { 
+          s3: true, 
+          sandbox: sandboxDeletion.success, 
+          database: true 
+        },
+        sandboxError: sandboxDeletion.error
+      });
     } catch (error: any) {
       res.status(500).json({ error: error.message });
     }
@@ -516,6 +529,57 @@ export async function registerRoutes(app: Express): Promise<Server> {
                 
                 const summary = `Edited ${path}`;
                 toolCalls.push({ name: toolName, arguments: args, summary });
+                if (clientConnected) {
+                  res.write(`data: ${JSON.stringify({ type: 'tool', name: toolName, summary })}\n\n`);
+                }
+              } else if (toolName === 'delete_file') {
+                const { path } = args;
+
+                let deletionStatus = { s3: false, sandbox: false, database: false };
+                let summary = `Deleted ${path}`;
+                const errors: string[] = [];
+                
+                // Find file in database
+                const existingFile = await storage.getFileByPath(projectId, path);
+                
+                if (existingFile) {
+                  // Delete from S3
+                  try {
+                    await deleteFileFromS3(existingFile.s3Key);
+                    deletionStatus.s3 = true;
+                  } catch (error: any) {
+                    console.error('Failed to delete file from S3:', error);
+                    errors.push(`S3: ${error.message}`);
+                  }
+                  
+                  // Delete from E2B sandbox
+                  const sandboxDeletion = await deleteFileFromSandbox(projectId, path);
+                  deletionStatus.sandbox = sandboxDeletion.success;
+                  if (!sandboxDeletion.success && sandboxDeletion.error) {
+                    console.error('Failed to delete file from sandbox:', sandboxDeletion.error);
+                    errors.push(`Sandbox: ${sandboxDeletion.error}`);
+                  }
+                  
+                  // Delete from database - only if at least one of the above succeeded
+                  if (deletionStatus.s3 || deletionStatus.sandbox) {
+                    try {
+                      await storage.deleteFile(existingFile.id);
+                      deletionStatus.database = true;
+                    } catch (error: any) {
+                      console.error('Failed to delete file from database:', error);
+                      errors.push(`Database: ${error.message}`);
+                    }
+                  }
+                  
+                  // Update summary based on results
+                  if (errors.length > 0) {
+                    summary = `Partially deleted ${path} (${errors.join(', ')})`;
+                  }
+                } else {
+                  summary = `File ${path} not found in database`;
+                }
+                
+                toolCalls.push({ name: toolName, arguments: args, summary, result: deletionStatus });
                 if (clientConnected) {
                   res.write(`data: ${JSON.stringify({ type: 'tool', name: toolName, summary })}\n\n`);
                 }

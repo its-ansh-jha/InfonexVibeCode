@@ -1,4 +1,4 @@
-// Official Google Gemini API integration for Gemini 2.5 Flash Preview model
+// Official Google Gemini API integration for Gemini 2.5 Flash & Pro models
 import { GoogleGenAI } from "@google/genai";
 
 interface Message {
@@ -16,15 +16,46 @@ interface ChatResponse {
   toolCalls?: ToolCall[];
 }
 
+export type GeminiModel = "gemini-2.5-flash-preview-09-2025" | "gemini-2.5-pro-latest";
+
 const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY || "" });
+
+// Intelligent model selection based on task complexity
+export function selectModel(userMessage: string): GeminiModel {
+  const message = userMessage.toLowerCase();
+  
+  // Use Pro for complex coding tasks
+  const proIndicators = [
+    'create', 'build', 'develop', 'implement', 'refactor',
+    'portfolio', 'website', 'app', 'application', 'system',
+    'backend', 'frontend', 'fullstack', 'database',
+    'complex', 'advanced', 'sophisticated', 'architect',
+    'e-commerce', 'dashboard', 'authentication', 'api'
+  ];
+  
+  // Count matches for pro indicators
+  const proScore = proIndicators.filter(indicator => message.includes(indicator)).length;
+  
+  // Use Pro if message is long (>100 chars) or has 2+ pro indicators
+  if (message.length > 100 || proScore >= 2) {
+    return "gemini-2.5-pro-latest";
+  }
+  
+  // Default to Flash for simple queries and quick responses
+  return "gemini-2.5-flash-preview-09-2025";
+}
 
 export async function chatWithAI(
   messages: Message[],
-  systemPrompt?: string
+  systemPrompt?: string,
+  model?: GeminiModel
 ): Promise<ChatResponse> {
   if (!process.env.GEMINI_API_KEY) {
     throw new Error("GEMINI_API_KEY is not set");
   }
+
+  // Auto-select model if not provided
+  const selectedModel = model || (messages.length > 0 ? selectModel(messages[messages.length - 1].content) : "gemini-2.5-flash-preview-09-2025");
 
   const contents = messages
     .filter(msg => msg.role !== "system")
@@ -34,7 +65,7 @@ export async function chatWithAI(
     }));
 
   const response = await ai.models.generateContent({
-    model: "gemini-2.5-flash-preview-09-2025",
+    model: selectedModel,
     config: systemPrompt ? { systemInstruction: systemPrompt } : undefined,
     contents,
   });
@@ -51,11 +82,18 @@ export async function chatWithAI(
 // Streaming version of chatWithAI that yields chunks and tool calls
 export async function* chatWithAIStream(
   messages: Message[],
-  systemPrompt?: string
+  systemPrompt?: string,
+  model?: GeminiModel
 ): AsyncGenerator<{ type: 'text' | 'tool_call'; content?: string; data?: any }, void, unknown> {
   if (!process.env.GEMINI_API_KEY) {
     throw new Error("GEMINI_API_KEY is not set");
   }
+
+  // Auto-select model if not provided
+  const selectedModel = model || (messages.length > 0 ? selectModel(messages[messages.length - 1].content) : "gemini-2.5-flash-preview-09-2025");
+  
+  // Log model selection for debugging
+  console.log(`Using Gemini model: ${selectedModel}`);
 
   const contents = messages
     .filter(msg => msg.role !== "system")
@@ -65,7 +103,7 @@ export async function* chatWithAIStream(
     }));
 
   const stream = await ai.models.generateContentStream({
-    model: "gemini-2.5-flash-preview-09-2025",
+    model: selectedModel,
     config: systemPrompt ? { systemInstruction: systemPrompt } : undefined,
     contents,
   });
@@ -135,6 +173,8 @@ export function getToolCallSummary(toolName: string, args: Record<string, any>):
       return `Created ${args.path}`;
     case "edit_file":
       return `Edited ${args.path}`;
+    case "delete_file":
+      return `Deleted ${args.path}`;
     case "run_shell":
       return `Ran shell command: ${args.command}`;
     case "serper_web_search":
@@ -151,12 +191,13 @@ export const SYSTEM_PROMPT = `You are InfonexAgent, an AI coding assistant creat
 You have access to the following tools:
 - write_file: Create or overwrite a file in the project's S3 storage and E2B sandbox
 - edit_file: Edit specific parts of an existing file
-- run_shell: Execute shell commands in the E2B sandbox terminal
+- delete_file: Delete a file from both S3 storage and E2B sandbox permanently
+- run_shell: Execute shell commands in the E2B sandbox terminal (supports long-running commands like npm run dev)
 - run_code: Execute code in the E2B code interpreter (Python/JavaScript)
-- serper_web_search: Search the web for information
+- serper_web_search: Search the web for documentation, libraries, best practices, or any information needed DURING your work (not after)
 
 CRITICAL RULES:
-1. All files you create/edit are automatically saved to S3 storage AND the E2B sandbox
+1. All files you create/edit/delete are automatically synced to S3 storage AND the E2B sandbox
 2. When configuring web servers, ALWAYS use port 3000 (the E2B sandbox preview uses port 3000)
 3. Use 0.0.0.0 as the host when binding ports to make them accessible
 4. The user NEVER sees the full code in chat - only brief summaries
@@ -166,6 +207,8 @@ CRITICAL RULES:
 8. When starting a server (npm run dev, python -m http.server, etc.), tell the user which command to use if they need to restart it
 9. Always Create Apps In React.js And use backend if required of Node.js with Express.js Note:Express.js is optional .Only Create any Other language also only when specifically gave the instruction by user.
 10. If you create a vite.config.js always set the server.allowedHosts to all .
+11. USE WEB SEARCH PROACTIVELY: When you need to know how to use a library, check documentation, find best practices, or solve technical problems - use serper_web_search DURING your work, not after. This makes you more capable and accurate.
+12. Shell commands auto-forward results back to you - you'll see stdout/stderr automatically after execution
 
 === E2B SANDBOX DOCUMENTATION ===
 

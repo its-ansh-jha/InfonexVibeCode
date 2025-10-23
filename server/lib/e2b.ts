@@ -102,6 +102,32 @@ export async function executeShellCommand(
   }
 }
 
+// Delete file from sandbox - returns success status
+export async function deleteFileFromSandbox(
+  projectId: string,
+  filePath: string
+): Promise<{ success: boolean; error?: string }> {
+  try {
+    const sandbox = await getOrCreateSandbox(projectId);
+    const result = await sandbox.commands.run(`rm -f "${filePath}"`);
+    
+    // Check if deletion was successful
+    if (result.exitCode === 0) {
+      return { success: true };
+    } else {
+      return { 
+        success: false, 
+        error: result.stderr || 'Unknown error during deletion' 
+      };
+    }
+  } catch (error: any) {
+    return { 
+      success: false, 
+      error: error.message 
+    };
+  }
+}
+
 export async function writeFileToSandbox(
   projectId: string,
   filePath: string,

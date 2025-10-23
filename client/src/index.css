@@ -292,6 +292,19 @@
 
   .overflow-wrap-anywhere {
     overflow-wrap: anywhere;
+    word-break: break-word;
+  }
+
+  /* Prevent horizontal overflow on mobile */
+  @media (max-width: 768px) {
+    pre {
+      max-width: 100%;
+    }
+    
+    code {
+      word-break: break-all;
+      white-space: pre-wrap;
+    }
   }
 
   /* .no-default-hover-elevate/no-default-active-elevate is an escape hatch so consumers of

@@ -31,14 +31,14 @@ function CodeBlock({ code, language = "javascript" }: { code: string; language?:
   };
 
   return (
-    <div className="relative group my-3">
-      <div className="flex items-center justify-between px-4 py-2 bg-muted/50 border border-border rounded-t-lg">
-        <span className="text-xs font-mono text-muted-foreground uppercase">{language}</span>
+    <div className="relative group my-3 max-w-full">
+      <div className="flex items-center justify-between px-3 sm:px-4 py-2 bg-muted/50 border border-border rounded-t-lg">
+        <span className="text-xs font-mono text-muted-foreground uppercase truncate">{language}</span>
         <Button
           variant="ghost"
           size="sm"
           onClick={handleCopy}
-          className="h-6 px-2 text-xs opacity-0 group-hover:opacity-100 transition-opacity"
+          className="h-6 px-2 text-xs opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity flex-shrink-0"
         >
           {copied ? (
             <>
@@ -53,8 +53,8 @@ function CodeBlock({ code, language = "javascript" }: { code: string; language?:
           )}
         </Button>
       </div>
-      <pre className="overflow-x-auto rounded-b-lg border border-t-0 border-border bg-muted/30 p-4 text-sm">
-        <code className="font-mono text-xs sm:text-sm">{code}</code>
+      <pre className="overflow-x-auto rounded-b-lg border border-t-0 border-border bg-muted/30 p-3 sm:p-4 text-sm max-w-full">
+        <code className="font-mono text-[10px] xs:text-xs sm:text-sm block break-all whitespace-pre-wrap">{code}</code>
       </pre>
     </div>
   );
@@ -98,16 +98,16 @@ function MessageContent({ content }: { content: string }) {
 
   // If no code blocks found, return plain text
   if (parts.length === 0) {
-    return <p className="whitespace-pre-wrap break-words leading-relaxed">{content}</p>;
+    return <p className="whitespace-pre-wrap break-words overflow-wrap-anywhere leading-relaxed text-sm sm:text-base">{content}</p>;
   }
 
   return (
-    <div className="space-y-2">
+    <div className="space-y-2 max-w-full overflow-hidden">
       {parts.map((part, idx) => (
         part.type === 'code' ? (
           <CodeBlock key={idx} code={part.content} language={part.language} />
         ) : (
-          <p key={idx} className="whitespace-pre-wrap break-words leading-relaxed">{part.content}</p>
+          <p key={idx} className="whitespace-pre-wrap break-words overflow-wrap-anywhere leading-relaxed text-sm sm:text-base">{part.content}</p>
         )
       ))}
     </div>
@@ -312,14 +312,16 @@ export default function ChatPage() {
                     </div>
                   )}
                   <div className={cn(
-                    "flex-1 space-y-2 min-w-0 max-w-[85%] sm:max-w-full",
+                    "flex-1 space-y-2 min-w-0 max-w-full",
                     isUser && "flex flex-col items-end"
                   )}>
                     <Card className={cn(
                       "p-3 sm:p-4 overflow-hidden max-w-full shadow-sm hover:shadow-md transition-shadow",
                       isUser ? "bg-primary text-primary-foreground" : "bg-card"
                     )}>
-                      <MessageContent content={message.content} />
+                      <div className="max-w-full overflow-hidden">
+                        <MessageContent content={message.content} />
+                      </div>
                     </Card>
                     {toolCalls && toolCalls.length > 0 && (
                       <div className="flex flex-wrap gap-1.5 sm:gap-2">
@@ -357,16 +359,18 @@ export default function ChatPage() {
                 <div className="flex items-center justify-center w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-gradient-to-br from-primary/20 to-primary/5 shrink-0">
                   <Bot className="h-4 w-4 sm:h-5 sm:w-5 text-primary" />
                 </div>
-                <div className="flex-1 space-y-2 min-w-0 max-w-[85%] sm:max-w-full">
+                <div className="flex-1 space-y-2 min-w-0 max-w-full">
                   <Card className="p-3 sm:p-4 bg-card overflow-hidden max-w-full shadow-sm">
-                    {streamingMessage ? (
-                      <MessageContent content={streamingMessage} />
-                    ) : (
-                      <div className="flex items-center gap-2">
-                        <Loader2 className="h-4 w-4 animate-spin" />
-                        <span className="text-sm text-muted-foreground">AI is thinking...</span>
-                      </div>
-                    )}
+                    <div className="max-w-full overflow-hidden">
+                      {streamingMessage ? (
+                        <MessageContent content={streamingMessage} />
+                      ) : (
+                        <div className="flex items-center gap-2">
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                          <span className="text-sm text-muted-foreground">AI is thinking...</span>
+                        </div>
+                      )}
+                    </div>
                   </Card>
                   {streamingTools.length > 0 && (
                     <div className="flex flex-wrap gap-1.5 sm:gap-2">

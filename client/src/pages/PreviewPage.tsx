@@ -1,7 +1,6 @@
-
 import { useQuery } from "@tanstack/react-query";
 import { useParams } from "wouter";
-import { Copy, Download, ExternalLink, Loader2, RefreshCw, AlertCircle } from "lucide-react";
+import { Copy, Download, ExternalLink, Loader2, RefreshCw, AlertCircle, Maximize2, Minimize2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
@@ -9,6 +8,7 @@ import type { Project } from "@shared/schema";
 import { useState, useEffect } from "react";
 import { auth } from "@/lib/firebase";
 import { queryClient } from "@/lib/queryClient";
+import { cn } from "@/lib/utils";
 
 export default function PreviewPage() {
   const { id: projectId } = useParams();
@@ -16,6 +16,7 @@ export default function PreviewPage() {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [isRecreating, setIsRecreating] = useState(false);
   const [sandboxExpired, setSandboxExpired] = useState(false);
+  const [isFullscreen, setIsFullscreen] = useState(false);
 
   const { data: project, isLoading: projectLoading, refetch: refetchProject } = useQuery<Project>({
     queryKey: ["/api/projects", projectId],
@@ -176,25 +177,34 @@ export default function PreviewPage() {
   }
 
   return (
-    <div className="flex flex-col h-full bg-muted">
-      {/* Mobile-sized preview container */}
-      <div className="flex-1 flex items-center justify-center p-4">
+    <div className="flex flex-col h-full bg-muted/30">
+      {/* Preview container */}
+      <div className="flex-1 flex items-center justify-center p-2 sm:p-4">
         {previewUrl ? (
-          <div className="w-full max-w-[375px] h-full flex flex-col bg-background rounded-xl shadow-2xl overflow-hidden">
+          <div className={cn(
+            "w-full h-full flex flex-col bg-background rounded-lg sm:rounded-xl shadow-xl sm:shadow-2xl overflow-hidden transition-all",
+            isFullscreen ? "max-w-full" : "max-w-[375px] sm:max-w-md md:max-w-2xl lg:max-w-4xl"
+          )}>
             {/* URL bar */}
-            <div className="flex items-center gap-2 p-2 border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-              <Badge variant="outline" className={`gap-1.5 shrink-0 text-xs ${sandboxExpired ? 'border-destructive text-destructive' : ''}`}>
-                <div className={`w-1.5 h-1.5 rounded-full ${sandboxExpired ? 'bg-destructive' : 'bg-chart-2 animate-pulse'}`} />
+            <div className="flex items-center gap-1.5 sm:gap-2 p-2 border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+              <Badge variant="outline" className={cn(
+                "gap-1.5 shrink-0 text-[10px] sm:text-xs",
+                sandboxExpired && "border-destructive text-destructive"
+              )}>
+                <div className={cn(
+                  "w-1.5 h-1.5 rounded-full",
+                  sandboxExpired ? "bg-destructive" : "bg-chart-2 animate-pulse"
+                )} />
                 {sandboxExpired ? 'Expired' : 'Active'}
               </Badge>
               
               <div className="flex-1 min-w-0">
-                <div className="px-2 py-1 bg-muted rounded text-xs font-mono truncate">
+                <div className="px-2 py-1 bg-muted rounded text-[10px] sm:text-xs font-mono truncate">
                   {previewUrl}
                 </div>
               </div>
 
-              <div className="flex items-center gap-1 shrink-0">
+              <div className="flex items-center gap-0.5 sm:gap-1 shrink-0">
                 {sandboxExpired && (
                   <Button
                     variant="destructive"
@@ -216,8 +226,19 @@ export default function PreviewPage() {
                 <Button
                   variant="ghost"
                   size="sm"
+                  onClick={() => setIsFullscreen(!isFullscreen)}
+                  className="h-7 w-7 p-0 hidden sm:flex"
+                  title={isFullscreen ? "Exit fullscreen" : "Fullscreen"}
+                >
+                  {isFullscreen ? <Minimize2 className="h-3 w-3" /> : <Maximize2 className="h-3 w-3" />}
+                </Button>
+
+                <Button
+                  variant="ghost"
+                  size="sm"
                   onClick={handleCopyUrl}
                   className="h-7 w-7 p-0"
+                  title="Copy URL"
                   data-testid="button-copy-url"
                 >
                   <Copy className="h-3 w-3" />
@@ -229,16 +250,18 @@ export default function PreviewPage() {
                   onClick={handleRefresh}
                   disabled={isRefreshing}
                   className="h-7 w-7 p-0"
+                  title="Refresh"
                   data-testid="button-refresh-preview"
                 >
-                  <RefreshCw className={`h-3 w-3 ${isRefreshing ? 'animate-spin' : ''}`} />
+                  <RefreshCw className={cn("h-3 w-3", isRefreshing && "animate-spin")} />
                 </Button>
 
                 <Button
                   variant="ghost"
                   size="sm"
                   onClick={handleDownloadSource}
-                  className="h-7 w-7 p-0"
+                  className="h-7 w-7 p-0 hidden sm:flex"
+                  title="Download source"
                   data-testid="button-download-source"
                 >
                   <Download className="h-3 w-3" />
@@ -249,6 +272,7 @@ export default function PreviewPage() {
                   size="sm"
                   onClick={() => window.open(previewUrl, '_blank')}
                   className="h-7 w-7 p-0"
+                  title="Open in new tab"
                   data-testid="button-open-external"
                 >
                   <ExternalLink className="h-3 w-3" />
@@ -256,7 +280,7 @@ export default function PreviewPage() {
               </div>
             </div>
 
-            {/* Mobile iframe */}
+            {/* Iframe */}
             <div className="flex-1 overflow-hidden">
               <iframe
                 src={previewUrl}

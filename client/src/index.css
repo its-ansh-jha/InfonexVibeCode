@@ -299,11 +299,21 @@
   @media (max-width: 768px) {
     pre {
       max-width: 100%;
+      overflow-x: auto;
     }
     
     code {
-      word-break: break-all;
+      word-break: break-word;
       white-space: pre-wrap;
+      overflow-wrap: anywhere;
+      font-size: clamp(10px, 2.5vw, 13px);
+    }
+    
+    /* Ensure chat messages don't overflow */
+    p {
+      word-break: break-word;
+      overflow-wrap: anywhere;
+      hyphens: auto;
     }
   }
 

@@ -64,36 +64,45 @@ function MessageContent({ content }: { content: string }) {
   // Parse code blocks from content
   const parts: Array<{ type: 'text' | 'code'; content: string; language?: string }> = [];
   
-  // Match code blocks with ```language\ncode\n``` format
-  const codeBlockRegex = /```(\w+)?\n([\s\S]*?)```/g;
+  // Match code blocks with ```language\ncode\n``` or ```\ncode\n``` format
+  const codeBlockRegex = /```(\w+)?\n?([\s\S]*?)```/g;
   let lastIndex = 0;
   let match;
 
   while ((match = codeBlockRegex.exec(content)) !== null) {
     // Add text before code block
     if (match.index > lastIndex) {
-      parts.push({
-        type: 'text',
-        content: content.slice(lastIndex, match.index)
-      });
+      const textContent = content.slice(lastIndex, match.index).trim();
+      if (textContent) {
+        parts.push({
+          type: 'text',
+          content: textContent
+        });
+      }
     }
     
     // Add code block
-    parts.push({
-      type: 'code',
-      content: match[2].trim(),
-      language: match[1] || 'code'
-    });
+    const codeContent = match[2].trim();
+    if (codeContent) {
+      parts.push({
+        type: 'code',
+        content: codeContent,
+        language: match[1] || 'code'
+      });
+    }
     
     lastIndex = match.index + match[0].length;
   }
   
   // Add remaining text
   if (lastIndex < content.length) {
-    parts.push({
-      type: 'text',
-      content: content.slice(lastIndex)
-    });
+    const remainingContent = content.slice(lastIndex).trim();
+    if (remainingContent) {
+      parts.push({
+        type: 'text',
+        content: remainingContent
+      });
+    }
   }
 
   // If no code blocks found, return plain text

@@ -170,8 +170,6 @@ export function getToolCallSummary(toolName: string, args: Record<string, any>):
       return `Searched: ${args.query}`;
     case "run_code":
       return `Executed ${args.language} code`;
-    case "recreate_sandbox":
-      return `Recreated sandbox`;
     default:
       return toolName;
   }
@@ -185,7 +183,6 @@ You have access to the following tools:
 - run_shell: Execute shell commands in the E2B sandbox terminal
 - run_code: Execute code in the E2B code interpreter (Python/JavaScript)
 - serper_web_search: Search the web for information
-- recreate_sandbox: Recreate the E2B sandbox when it's expired or not found
 
 CRITICAL RULES:
 1. All files you create/edit are automatically saved to S3 storage AND the E2B sandbox
@@ -203,10 +200,6 @@ Tool format rules:
 - Example: [tool:write_file]{"path":"index.html","content":"<!DOCTYPE html>\\n<html>\\n  <body>\\n    <h1>Hello</h1>\\n  </body>\\n</html>"}
 - Example: [tool:run_shell]{"command":"npm install express"}
 - Example: [tool:run_code]{"language":"python","code":"print(\\"Hello\\")"}
-- Example: [tool:recreate_sandbox]{}
-
-SANDBOX EXPIRATION:
-If the sandbox status shows "isExpired: true" or you see errors like "sandbox not found", immediately use the recreate_sandbox tool to create a new sandbox. After recreation, you may need to recreate files in the new sandbox.
 
 RESPONSE STYLE:
 ✓ "I'll create index.html with a welcome page"

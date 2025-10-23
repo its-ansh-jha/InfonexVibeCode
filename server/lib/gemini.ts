@@ -16,46 +16,17 @@ interface ChatResponse {
   toolCalls?: ToolCall[];
 }
 
-export type GeminiModel = "gemini-2.5-flash-preview-09-2025" | "gemini-2.5-pro-latest";
-
 const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY || "" });
-
-// Intelligent model selection based on task complexity
-export function selectModel(userMessage: string): GeminiModel {
-  const message = userMessage.toLowerCase();
-  
-  // Use Pro for complex coding tasks
-  const proIndicators = [
-    'create', 'build', 'develop', 'implement', 'refactor',
-    'portfolio', 'website', 'app', 'application', 'system',
-    'backend', 'frontend', 'fullstack', 'database',
-    'complex', 'advanced', 'sophisticated', 'architect',
-    'e-commerce', 'dashboard', 'authentication', 'api'
-  ];
-  
-  // Count matches for pro indicators
-  const proScore = proIndicators.filter(indicator => message.includes(indicator)).length;
-  
-  // Use Pro if message is long (>100 chars) or has 2+ pro indicators
-  if (message.length > 100 || proScore >= 2) {
-    return "gemini-2.5-pro-latest";
-  }
-  
-  // Default to Flash for simple queries and quick responses
-  return "gemini-2.5-flash-preview-09-2025";
-}
 
 export async function chatWithAI(
   messages: Message[],
-  systemPrompt?: string,
-  model?: GeminiModel
+  systemPrompt?: string
 ): Promise<ChatResponse> {
   if (!process.env.GEMINI_API_KEY) {
     throw new Error("GEMINI_API_KEY is not set");
   }
 
-  // Auto-select model if not provided
-  const selectedModel = model || (messages.length > 0 ? selectModel(messages[messages.length - 1].content) : "gemini-2.5-flash-preview-09-2025");
+  const selectedModel = "gemini-2.5-flash-preview-09-2025";
 
   const contents = messages
     .filter(msg => msg.role !== "system")
@@ -82,18 +53,13 @@ export async function chatWithAI(
 // Streaming version of chatWithAI that yields chunks and tool calls
 export async function* chatWithAIStream(
   messages: Message[],
-  systemPrompt?: string,
-  model?: GeminiModel
+  systemPrompt?: string
 ): AsyncGenerator<{ type: 'text' | 'tool_call'; content?: string; data?: any }, void, unknown> {
   if (!process.env.GEMINI_API_KEY) {
     throw new Error("GEMINI_API_KEY is not set");
   }
 
-  // Auto-select model if not provided
-  const selectedModel = model || (messages.length > 0 ? selectModel(messages[messages.length - 1].content) : "gemini-2.5-flash-preview-09-2025");
-  
-  // Log model selection for debugging
-  console.log(`Using Gemini model: ${selectedModel}`);
+  const selectedModel = "gemini-2.5-flash-preview-09-2025";
 
   const contents = messages
     .filter(msg => msg.role !== "system")

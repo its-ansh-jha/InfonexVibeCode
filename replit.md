@@ -7,8 +7,7 @@ Vibe Code is an AI-powered app building platform that allows users to create app
 - **Firebase Authentication**: Google sign-in for user management
 - **Project Management**: Create and manage multiple app projects
 - **Advanced AI Chat Agent**: 
-  - **Dual Model System**: Intelligent auto-switching between Gemini 2.5 Flash (fast) and Gemini 2.5 Pro (complex coding tasks)
-  - Automatic model selection based on task complexity
+  - Powered by Google's Gemini 2.5 Flash Preview model
   - Streaming responses with live tool execution feedback
 - **AWS S3 Storage**: Secure file storage for all project files
 - **E2B Sandbox Integration**: Real-time code execution and preview in isolated sandboxes
@@ -38,9 +37,7 @@ Vibe Code is an AI-powered app building platform that allows users to create app
 ### Backend (Express + TypeScript)
 - **Database**: PostgreSQL with Drizzle ORM
 - **AI Integration**: 
-  - Dual Google Gemini models with intelligent selection:
-    - **gemini-2.5-flash-preview-09-2025**: For quick responses and simple tasks
-    - **gemini-2.5-pro-latest**: Auto-selected for complex coding tasks (portfolios, apps, backends, etc.)
+  - Google Gemini 2.5 Flash Preview (09-2025) model
   - Streaming responses via SSE
 - **File Storage**: AWS S3 for persistent file storage
 - **Code Execution**: E2B Code Interpreter SDK
@@ -116,10 +113,6 @@ Vibe Code is an AI-powered app building platform that allows users to create app
 
 ## Recent Changes
 - **October 23, 2025** (Latest Session): Advanced AI Platform Enhancements
-  - **Dual Gemini Model System**:
-    - Added intelligent model selection between Flash (fast) and Pro (complex coding)
-    - Auto-switches to Pro for tasks like "create portfolio website", "build app", "implement backend"
-    - Automatic detection based on task complexity, message length, and keywords
   - **Enhanced File Management**:
     - `delete_file` tool now removes files from all three locations: S3, E2B sandbox, and database
     - Accurate status reporting with detailed error messages for each deletion step

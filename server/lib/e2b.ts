@@ -1,4 +1,3 @@
-
 import { Sandbox } from '@e2b/code-interpreter';
 
 const E2B_API_KEY = process.env.E2B_API_KEY!;
@@ -40,16 +39,16 @@ export async function getSandbox(projectId: string): Promise<Sandbox | null> {
 
 export async function getOrCreateSandbox(projectId: string): Promise<Sandbox> {
   let sandbox = activeSandboxes.get(projectId);
-  
+
   if (!sandbox) {
     const sandboxInfo = await createSandbox(projectId);
     sandbox = activeSandboxes.get(projectId);
-    
+
     if (!sandbox) {
       throw new Error('Failed to retrieve sandbox after creation');
     }
   }
-  
+
   return sandbox;
 }
 
@@ -60,9 +59,9 @@ export async function executeCode(
 ): Promise<ExecutionResult> {
   try {
     const sandbox = await getOrCreateSandbox(projectId);
-    
+
     const execution = await sandbox.runCode(code);
-    
+
     return {
       stdout: execution.logs.stdout.join('\n'),
       stderr: execution.logs.stderr.join('\n'),
@@ -85,9 +84,9 @@ export async function executeShellCommand(
 ): Promise<ExecutionResult> {
   try {
     const sandbox = await getOrCreateSandbox(projectId);
-    
+
     const result = await sandbox.commands.run(command);
-    
+
     return {
       stdout: result.stdout || '',
       stderr: result.stderr || '',
@@ -144,7 +143,7 @@ export async function listFilesInSandbox(
 
 export async function closeSandbox(projectId: string): Promise<void> {
   const sandbox = activeSandboxes.get(projectId);
-  
+
   if (sandbox) {
     await sandbox.kill();
     activeSandboxes.delete(projectId);
@@ -168,7 +167,7 @@ export async function getSandboxStatus(projectId: string): Promise<{
     }
 
     const processes = await sandbox.commands.list();
-    
+
     return { 
       isActive: true, 
       hasRunningProcesses: processes.length > 0,

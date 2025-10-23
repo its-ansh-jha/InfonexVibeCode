@@ -296,6 +296,59 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.post("/api/sandbox/:projectId/recreate", requireAuth, async (req: Request, res) => {
+    try {
+      if (!(await checkProjectOwnership(req.params.projectId, req.userId!))) {
+        return res.status(403).json({ error: "Forbidden: Access denied" });
+      }
+      
+      const { recreateSandbox } = await import("./lib/e2b");
+      
+      // Recreate the sandbox
+      const sandboxInfo = await recreateSandbox(req.params.projectId);
+      
+      // Update project with new sandbox info
+      await storage.updateProject(req.params.projectId, {
+        sandboxId: sandboxInfo.sandboxId,
+        sandboxUrl: sandboxInfo.url,
+      });
+      
+      // Sync all files to new sandbox
+      const files = await storage.getFilesByProjectId(req.params.projectId);
+      for (const file of files) {
+        try {
+          const content = await getFileFromS3(file.s3Key);
+          await writeFileToSandbox(req.params.projectId, file.path, content);
+        } catch (error) {
+          console.error(`Failed to sync file ${file.path} to new sandbox:`, error);
+        }
+      }
+      
+      res.json({ 
+        url: sandboxInfo.url,
+        sandboxId: sandboxInfo.sandboxId,
+        filesSynced: files.length
+      });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.get("/api/sandbox/:projectId/validate", requireAuth, async (req: Request, res) => {
+    try {
+      if (!(await checkProjectOwnership(req.params.projectId, req.userId!))) {
+        return res.status(403).json({ error: "Forbidden: Access denied" });
+      }
+      
+      const { validateSandbox } = await import("./lib/e2b");
+      const isValid = await validateSandbox(req.params.projectId);
+      
+      res.json({ isValid });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
   // Messages - Chat with AI
   app.get("/api/messages/:projectId", requireAuth, async (req: Request, res) => {
     try {

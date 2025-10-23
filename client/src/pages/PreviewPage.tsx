@@ -1,17 +1,21 @@
 
 import { useQuery } from "@tanstack/react-query";
 import { useParams } from "wouter";
-import { Copy, Download, ExternalLink, Loader2, RefreshCw } from "lucide-react";
+import { Copy, Download, ExternalLink, Loader2, RefreshCw, AlertCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import type { Project } from "@shared/schema";
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { auth } from "@/lib/firebase";
+import { queryClient } from "@/lib/queryClient";
 
 export default function PreviewPage() {
   const { id: projectId } = useParams();
   const { toast } = useToast();
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [isRecreating, setIsRecreating] = useState(false);
+  const [sandboxExpired, setSandboxExpired] = useState(false);
 
   const { data: project, isLoading: projectLoading, refetch: refetchProject } = useQuery<Project>({
     queryKey: ["/api/projects", projectId],
@@ -22,6 +26,38 @@ export default function PreviewPage() {
     queryKey: ["/api/sandbox", projectId, "url"],
     enabled: !!projectId && !!project?.sandboxId,
   });
+
+  // Validate sandbox periodically
+  useEffect(() => {
+    if (!projectId || !project?.sandboxId) return;
+
+    const validateSandbox = async () => {
+      try {
+        const idToken = await auth.currentUser?.getIdToken();
+        const response = await fetch(`/api/sandbox/${projectId}/validate`, {
+          headers: {
+            "Authorization": `Bearer ${idToken}`,
+          },
+        });
+        
+        if (response.ok) {
+          const data = await response.json();
+          setSandboxExpired(!data.isValid);
+        }
+      } catch (error) {
+        // If validation fails, assume expired
+        setSandboxExpired(true);
+      }
+    };
+
+    // Check immediately
+    validateSandbox();
+
+    // Check every 30 seconds
+    const interval = setInterval(validateSandbox, 30000);
+
+    return () => clearInterval(interval);
+  }, [projectId, project?.sandboxId]);
 
   if (projectLoading) {
     return (
@@ -86,6 +122,46 @@ export default function PreviewPage() {
     });
   };
 
+  const handleRecreateSandbox = async () => {
+    setIsRecreating(true);
+    try {
+      const idToken = await auth.currentUser?.getIdToken();
+      const response = await fetch(`/api/sandbox/${projectId}/recreate`, {
+        method: "POST",
+        headers: {
+          "Authorization": `Bearer ${idToken}`,
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to recreate sandbox");
+      }
+
+      const data = await response.json();
+      
+      // Invalidate and refetch project data
+      await queryClient.invalidateQueries({ queryKey: ["/api/projects", projectId] });
+      await queryClient.invalidateQueries({ queryKey: ["/api/sandbox", projectId, "url"] });
+      await refetchProject();
+      await refetchSandbox();
+      
+      setSandboxExpired(false);
+      
+      toast({
+        title: "Sandbox recreated",
+        description: `New sandbox created with ${data.filesSynced} files synced`,
+      });
+    } catch (error: any) {
+      toast({
+        title: "Failed to recreate sandbox",
+        description: error.message,
+        variant: "destructive",
+      });
+    } finally {
+      setIsRecreating(false);
+    }
+  };
+
   if (!hasSandbox) {
     return (
       <div className="flex items-center justify-center h-full">
@@ -107,9 +183,9 @@ export default function PreviewPage() {
           <div className="w-full max-w-[375px] h-full flex flex-col bg-background rounded-xl shadow-2xl overflow-hidden">
             {/* URL bar */}
             <div className="flex items-center gap-2 p-2 border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-              <Badge variant="outline" className="gap-1.5 shrink-0 text-xs">
-                <div className="w-1.5 h-1.5 bg-chart-2 rounded-full animate-pulse" />
-                Active
+              <Badge variant="outline" className={`gap-1.5 shrink-0 text-xs ${sandboxExpired ? 'border-destructive text-destructive' : ''}`}>
+                <div className={`w-1.5 h-1.5 rounded-full ${sandboxExpired ? 'bg-destructive' : 'bg-chart-2 animate-pulse'}`} />
+                {sandboxExpired ? 'Expired' : 'Active'}
               </Badge>
               
               <div className="flex-1 min-w-0">
@@ -119,6 +195,24 @@ export default function PreviewPage() {
               </div>
 
               <div className="flex items-center gap-1 shrink-0">
+                {sandboxExpired && (
+                  <Button
+                    variant="destructive"
+                    size="sm"
+                    onClick={handleRecreateSandbox}
+                    disabled={isRecreating}
+                    className="h-7 w-7 p-0"
+                    title="Recreate sandbox"
+                    data-testid="button-recreate-sandbox"
+                  >
+                    {isRecreating ? (
+                      <Loader2 className="h-3 w-3 animate-spin" />
+                    ) : (
+                      <AlertCircle className="h-3 w-3" />
+                    )}
+                  </Button>
+                )}
+                
                 <Button
                   variant="ghost"
                   size="sm"

@@ -6,7 +6,7 @@ Vibe Code is an AI-powered app building platform that allows users to create app
 ## Features
 - **Firebase Authentication**: Google sign-in for user management
 - **Project Management**: Create and manage multiple app projects
-- **AI Chat Agent**: Powered by OpenRouter's z-ai/glm-4.5-air:free model with streaming responses
+- **AI Chat Agent**: Powered by Google's Gemini 2.5 Flash Preview (09-2025) model with streaming responses
 - **AWS S3 Storage**: Secure file storage for all project files
 - **E2B Sandbox Integration**: Real-time code execution and preview in isolated sandboxes
 - **AI Tools**:
@@ -33,7 +33,7 @@ Vibe Code is an AI-powered app building platform that allows users to create app
 
 ### Backend (Express + TypeScript)
 - **Database**: PostgreSQL with Drizzle ORM
-- **AI Integration**: OpenRouter API (GLM-4.5-air model) with streaming
+- **AI Integration**: Official Google Gemini API (gemini-2.5-flash-preview-09-2025 model) with streaming
 - **File Storage**: AWS S3 for persistent file storage
 - **Code Execution**: E2B Code Interpreter SDK
 - **Web Search**: Serper API
@@ -76,7 +76,7 @@ Vibe Code is an AI-powered app building platform that allows users to create app
 - `VITE_FIREBASE_PROJECT_ID`: Firebase project ID
 - `VITE_FIREBASE_APP_ID`: Firebase app ID
 - `VITE_FIREBASE_API_KEY`: Firebase API key
-- `OPENROUTER_API_KEY`: OpenRouter API key
+- `GEMINI_API_KEY`: Google Gemini API key from https://ai.google.dev/
 - `E2B_API_KEY`: E2B sandbox API key
 - `SERPER_API_KEY`: Serper web search API key
 - `AWS_ACCESS_KEY_ID`: AWS access key for S3

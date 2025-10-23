@@ -277,7 +277,7 @@ export default function ChatPage() {
             </div>
             <h3 className="text-xl sm:text-2xl font-semibold mb-2">Start Building with AI</h3>
             <p className="text-sm sm:text-base text-muted-foreground mb-6">
-              Tell the AI what app you want to build. Files are stored in S3 and run in E2B sandbox.
+              Tell the AI what app you want to build.
             </p>
             <div className="grid grid-cols-2 gap-2 w-full max-w-xs">
               <Badge variant="secondary" className="text-xs py-2 justify-center hover:bg-secondary/80 transition-colors">

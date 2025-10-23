@@ -159,13 +159,17 @@ export default function PreviewPage() {
               </div>
             </div>
 
-            {/* Fullscreen iframe */}
-            <iframe
-              src={previewUrl}
-              className="w-full flex-1 border-0"
-              title="App Preview"
-              data-testid="iframe-preview"
-            />
+            {/* Mobile-sized iframe preview */}
+            <div className="flex-1 bg-muted flex items-start justify-center overflow-auto p-4">
+              <div className="w-full max-w-[375px] h-full bg-background rounded-lg shadow-xl overflow-hidden">
+                <iframe
+                  src={previewUrl}
+                  className="w-full h-full border-0"
+                  title="App Preview"
+                  data-testid="iframe-preview"
+                />
+              </div>
+            </div>
           </div>
         ) : (
           <div className="flex items-center justify-center h-full">

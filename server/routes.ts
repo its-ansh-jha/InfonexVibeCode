@@ -244,11 +244,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       const project = await storage.getProject(req.params.projectId);
-      if (project?.sandboxUrl) {
+      
+      if (project?.sandboxUrl && project?.sandboxId) {
         res.json({ url: project.sandboxUrl });
       } else {
-        const url = await getSandboxUrl(req.params.projectId);
-        res.json({ url });
+        const sandboxInfo = await createSandbox(req.params.projectId);
+        await storage.updateProject(req.params.projectId, {
+          sandboxId: sandboxInfo.sandboxId,
+          sandboxUrl: sandboxInfo.url,
+        });
+        res.json({ url: sandboxInfo.url });
       }
     } catch (error: any) {
       res.status(500).json({ error: error.message });
@@ -317,7 +322,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // Parse tool calls from the full response with better error handling
         // Use a more robust regex that handles multi-line JSON
         const toolCallPattern = /\[tool:(\w+)\](\{[\s\S]*?\})\s*(?=\[tool:|\n\n|$)/g;
-        const toolCallMatches = fullResponse.matchAll(toolCallPattern);
+        const toolCallMatches = Array.from(fullResponse.matchAll(toolCallPattern));
         
         for (const match of toolCallMatches) {
           const toolName = match[1];

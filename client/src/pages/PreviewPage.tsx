@@ -1,12 +1,12 @@
+
 import { useQuery } from "@tanstack/react-query";
 import { useParams } from "wouter";
-import { Copy, Download, ExternalLink, Loader2, Terminal, RefreshCw } from "lucide-react";
+import { Copy, Download, ExternalLink, Loader2, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import type { Project } from "@shared/schema";
 import { useState } from "react";
-import { apiRequest } from "@/lib/queryClient";
 
 export default function PreviewPage() {
   const { id: projectId } = useParams();
@@ -90,14 +90,9 @@ export default function PreviewPage() {
     return (
       <div className="flex items-center justify-center h-full">
         <div className="flex flex-col items-center gap-4 max-w-md mx-auto text-center p-6">
-          <div className="flex items-center justify-center w-16 h-16 rounded-full bg-muted">
-            <Terminal className="h-8 w-8 text-muted-foreground" />
-          </div>
-          <div>
-            <h3 className="text-xl font-semibold mb-2">No sandbox created yet</h3>
-            <p className="text-muted-foreground">
-              The E2B sandbox will be created automatically when you start chatting with the AI.
-            </p>
+          <div className="text-center">
+            <Loader2 className="h-8 w-8 animate-spin text-muted-foreground mx-auto mb-2" />
+            <p className="text-muted-foreground">Setting up sandbox...</p>
           </div>
         </div>
       </div>
@@ -106,73 +101,72 @@ export default function PreviewPage() {
 
   return (
     <div className="flex flex-col h-full">
-      {/* Top bar with URL and controls */}
-      <div className="flex items-center gap-2 p-3 border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-        <Badge variant="outline" className="gap-1.5 shrink-0">
-          <div className="w-2 h-2 bg-chart-2 rounded-full animate-pulse" />
-          Active
-        </Badge>
-        
-        <div className="flex-1 flex items-center gap-2 min-w-0">
-          <div className="flex-1 px-3 py-1.5 bg-muted rounded-md text-sm font-mono truncate">
-            {previewUrl || 'Loading...'}
-          </div>
-          
-          {previewUrl && (
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={handleCopyUrl}
-              className="shrink-0"
-              data-testid="button-copy-url"
-            >
-              <Copy className="h-4 w-4" />
-            </Button>
-          )}
-        </div>
-
-        <div className="flex items-center gap-2 shrink-0">
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={handleRefresh}
-            disabled={isRefreshing}
-            data-testid="button-refresh-preview"
-          >
-            <RefreshCw className={`h-4 w-4 ${isRefreshing ? 'animate-spin' : ''}`} />
-          </Button>
-
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={handleDownloadSource}
-            data-testid="button-download-source"
-          >
-            <Download className="h-4 w-4" />
-          </Button>
-
-          {previewUrl && (
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => window.open(previewUrl, '_blank')}
-              data-testid="button-open-external"
-            >
-              <ExternalLink className="h-4 w-4" />
-            </Button>
-          )}
-        </div>
-      </div>
-
-      {/* Fullscreen iframe */}
+      {/* Fullscreen iframe container with URL bar inside */}
       <div className="flex-1 relative bg-background">
         {previewUrl ? (
-          <iframe
-            src={previewUrl}
-            className="w-full h-full border-0"
-            title="App Preview"
-            data-testid="iframe-preview"
-          />
+          <div className="w-full h-full flex flex-col">
+            {/* URL bar inside iframe area */}
+            <div className="flex items-center gap-2 p-3 border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 z-10">
+              <Badge variant="outline" className="gap-1.5 shrink-0">
+                <div className="w-2 h-2 bg-chart-2 rounded-full animate-pulse" />
+                Active
+              </Badge>
+              
+              <div className="flex-1 flex items-center gap-2 min-w-0">
+                <div className="flex-1 px-3 py-1.5 bg-muted rounded-md text-sm font-mono truncate">
+                  {previewUrl}
+                </div>
+                
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={handleCopyUrl}
+                  className="shrink-0"
+                  data-testid="button-copy-url"
+                >
+                  <Copy className="h-4 w-4" />
+                </Button>
+              </div>
+
+              <div className="flex items-center gap-2 shrink-0">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={handleRefresh}
+                  disabled={isRefreshing}
+                  data-testid="button-refresh-preview"
+                >
+                  <RefreshCw className={`h-4 w-4 ${isRefreshing ? 'animate-spin' : ''}`} />
+                </Button>
+
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={handleDownloadSource}
+                  data-testid="button-download-source"
+                >
+                  <Download className="h-4 w-4" />
+                </Button>
+
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => window.open(previewUrl, '_blank')}
+                  data-testid="button-open-external"
+                >
+                  <ExternalLink className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
+
+            {/* Fullscreen iframe */}
+            <iframe
+              src={previewUrl}
+              className="w-full flex-1 border-0"
+              title="App Preview"
+              data-testid="iframe-preview"
+            />
+          </div>
         ) : (
           <div className="flex items-center justify-center h-full">
             <div className="text-center">

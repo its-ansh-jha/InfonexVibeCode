@@ -61,11 +61,11 @@ export async function chatWithAI(
   };
 }
 
-// Streaming version of chatWithAI
+// Streaming version of chatWithAI that yields chunks and tool calls
 export async function* chatWithAIStream(
   messages: Message[],
   systemPrompt?: string
-): AsyncGenerator<string, void, unknown> {
+): AsyncGenerator<{ type: 'text' | 'tool_call'; content?: string; data?: any }, void, unknown> {
   const apiKey = process.env.OPENROUTER_API_KEY;
   if (!apiKey) {
     throw new Error("OPENROUTER_API_KEY is not set");
@@ -104,6 +104,7 @@ export async function* chatWithAIStream(
 
   const reader = response.body.getReader();
   const decoder = new TextDecoder();
+  let fullContent = "";
 
   try {
     while (true) {
@@ -122,13 +123,20 @@ export async function* chatWithAIStream(
             const parsed = JSON.parse(data);
             const content = parsed.choices[0]?.delta?.content;
             if (content) {
-              yield content;
+              fullContent += content;
+              yield { type: 'text', content };
             }
           } catch (e) {
             // Skip parsing errors
           }
         }
       }
+    }
+
+    // After streaming is complete, parse tool calls from the full content
+    const toolCalls = parseToolCalls(fullContent);
+    for (const toolCall of toolCalls) {
+      yield { type: 'tool_call', data: toolCall };
     }
   } finally {
     reader.releaseLock();

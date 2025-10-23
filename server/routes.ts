@@ -2,14 +2,18 @@ import type { Express, Request } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { requireAuth } from "./middleware/auth";
-import { chatWithAI, SYSTEM_PROMPT, getToolCallSummary } from "./lib/openrouter";
-import { listRepositories, writeFile, getFileContent, listFiles } from "./lib/github";
+import { chatWithAIStream, SYSTEM_PROMPT, getToolCallSummary } from "./lib/openrouter";
 import { webSearch } from "./lib/serper";
-import { insertProjectSchema, insertMessageSchema } from "@shared/schema";
-import { encryptToken, decryptToken } from "./lib/encryption";
-
-// Simple in-memory E2B sandbox tracking (in production, use database)
-const sandboxes = new Map<string, { sandboxId: string; url: string; running: boolean; logs: string[] }>();
+import { insertProjectSchema, insertMessageSchema, insertFileSchema } from "@shared/schema";
+import { uploadFileToS3, getFileFromS3, deleteFileFromS3, deleteProjectFilesFromS3 } from "./lib/s3";
+import { 
+  createSandbox, 
+  executeCode, 
+  executeShellCommand, 
+  writeFileToSandbox, 
+  getSandboxUrl,
+  closeSandbox
+} from "./lib/e2b";
 
 async function checkProjectOwnership(projectId: string, userId: string): Promise<boolean> {
   const project = await storage.getProject(projectId);
@@ -22,7 +26,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { id, email, displayName, photoURL } = req.body;
       
-      // Verify the ID matches the authenticated user
       if (id !== req.userId) {
         return res.status(403).json({ error: "Forbidden: ID mismatch" });
       }
@@ -34,7 +37,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Projects - CRUD (all require authentication)
+  // Projects - CRUD
   app.get("/api/projects", requireAuth, async (req: Request, res) => {
     try {
       const projects = await storage.getProjectsByUserId(req.userId!);
@@ -51,7 +54,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ error: "Project not found" });
       }
       
-      // Check ownership
       if (project.userId !== req.userId) {
         return res.status(403).json({ error: "Forbidden: Access denied" });
       }
@@ -65,8 +67,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/projects", requireAuth, async (req: Request, res) => {
     try {
       const validated = insertProjectSchema.parse({ ...req.body, userId: req.userId });
-      const project = await storage.createProject(validated);
-      res.json(project);
+      const project = await storage.createProject({
+        ...validated,
+        s3Prefix: `projects/${validated.userId}/${Date.now()}`,
+      });
+      
+      // Create E2B sandbox for the project
+      try {
+        const sandboxInfo = await createSandbox(project.id);
+        await storage.updateProject(project.id, {
+          sandboxId: sandboxInfo.sandboxId,
+          sandboxUrl: sandboxInfo.url,
+        });
+        
+        const updatedProject = await storage.getProject(project.id);
+        res.json(updatedProject);
+      } catch (error: any) {
+        console.error('Failed to create sandbox:', error);
+        res.json(project);
+      }
     } catch (error: any) {
       res.status(400).json({ error: error.message });
     }
@@ -74,11 +93,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.delete("/api/projects/:id", requireAuth, async (req: Request, res) => {
     try {
-      // Check ownership before deleting
       if (!(await checkProjectOwnership(req.params.id, req.userId!))) {
         return res.status(403).json({ error: "Forbidden: Access denied" });
       }
       
+      // Clean up S3 files
+      await deleteProjectFilesFromS3(req.params.id);
+      
+      // Close E2B sandbox
+      await closeSandbox(req.params.id);
+      
+      // Delete project and files from database
       await storage.deleteProject(req.params.id);
       res.json({ success: true });
     } catch (error: any) {
@@ -86,125 +111,153 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // GitHub integration (requires authentication and ownership)
-  app.post("/api/projects/:id/connect-github", requireAuth, async (req: Request, res) => {
+  // Files - CRUD
+  app.get("/api/files/:projectId", requireAuth, async (req: Request, res) => {
     try {
-      const project = await storage.getProject(req.params.id);
-      
-      if (!project) {
-        return res.status(404).json({ error: "Project not found" });
-      }
-      
-      // Check ownership
-      if (project.userId !== req.userId) {
-        return res.status(403).json({ error: "Forbidden: Access denied" });
-      }
-
-      const { githubToken, repoFullName } = req.body;
-      
-      // Validate the GitHub token before saving
-      try {
-        await listRepositories(githubToken);
-      } catch (error: any) {
-        return res.status(400).json({ error: "Invalid GitHub token. Please generate a new personal access token with 'repo' scope." });
-      }
-      
-      // Encrypt the GitHub token before storing in database
-      const encryptedToken = encryptToken(githubToken);
-      let updateData: any = { githubToken: encryptedToken };
-
-      if (repoFullName) {
-        const [owner, repo] = repoFullName.split("/");
-        updateData = {
-          ...updateData,
-          githubRepoUrl: `https://github.com/${repoFullName}`,
-          githubRepoName: repoFullName,
-          githubOwner: owner,
-        };
-      }
-
-      const updated = await storage.updateProject(req.params.id, updateData);
-      res.json(updated);
-    } catch (error: any) {
-      res.status(500).json({ error: error.message });
-    }
-  });
-
-  app.post("/api/projects/:id/disconnect-github", requireAuth, async (req: Request, res) => {
-    try {
-      // Check ownership
-      if (!(await checkProjectOwnership(req.params.id, req.userId!))) {
+      if (!(await checkProjectOwnership(req.params.projectId, req.userId!))) {
         return res.status(403).json({ error: "Forbidden: Access denied" });
       }
       
-      const updated = await storage.updateProject(req.params.id, {
-        githubToken: null,
-        githubRepoUrl: null,
-        githubRepoName: null,
-        githubOwner: null,
-      });
-      res.json(updated);
-    } catch (error: any) {
-      res.status(500).json({ error: error.message });
-    }
-  });
-
-  app.get("/api/github/repos/:projectId", requireAuth, async (req: Request, res) => {
-    try {
-      const project = await storage.getProject(req.params.projectId);
-      
-      if (!project) {
-        return res.status(404).json({ error: "Project not found" });
-      }
-      
-      // Check ownership
-      if (project.userId !== req.userId) {
-        return res.status(403).json({ error: "Forbidden: Access denied" });
-      }
-      
-      if (!project.githubToken) {
-        return res.status(400).json({ error: "GitHub not connected" });
-      }
-
-      const decryptedToken = decryptToken(project.githubToken);
-      const repos = await listRepositories(decryptedToken);
-      res.json(repos);
-    } catch (error: any) {
-      res.status(500).json({ error: error.message });
-    }
-  });
-
-  app.get("/api/github/files/:projectId", requireAuth, async (req: Request, res) => {
-    try {
-      const project = await storage.getProject(req.params.projectId);
-      
-      if (!project) {
-        return res.status(404).json({ error: "Project not found" });
-      }
-      
-      // Check ownership
-      if (project.userId !== req.userId) {
-        return res.status(403).json({ error: "Forbidden: Access denied" });
-      }
-      
-      if (!project.githubToken || !project.githubOwner || !project.githubRepoName) {
-        return res.status(400).json({ error: "GitHub repository not connected" });
-      }
-
-      const [, repo] = project.githubRepoName.split("/");
-      const path = req.query.path as string || '';
-      const decryptedToken = decryptToken(project.githubToken);
-      const files = await listFiles(decryptedToken, project.githubOwner, repo, path);
+      const files = await storage.getFilesByProjectId(req.params.projectId);
       res.json(files);
     } catch (error: any) {
       res.status(500).json({ error: error.message });
     }
   });
 
-  // Messages - Chat with AI (requires authentication and ownership)
+  app.get("/api/files/:projectId/:fileId", requireAuth, async (req: Request, res) => {
+    try {
+      if (!(await checkProjectOwnership(req.params.projectId, req.userId!))) {
+        return res.status(403).json({ error: "Forbidden: Access denied" });
+      }
+      
+      const file = await storage.getFile(req.params.fileId);
+      if (!file) {
+        return res.status(404).json({ error: "File not found" });
+      }
+      
+      const content = await getFileFromS3(file.s3Key);
+      res.json({ ...file, content });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.post("/api/files", requireAuth, async (req: Request, res) => {
+    try {
+      const { projectId, path, content } = req.body;
+      
+      if (!(await checkProjectOwnership(projectId, req.userId!))) {
+        return res.status(403).json({ error: "Forbidden: Access denied" });
+      }
+      
+      // Upload to S3
+      const s3Key = await uploadFileToS3(projectId, path, content);
+      
+      // Write to E2B sandbox
+      try {
+        await writeFileToSandbox(projectId, path, content);
+      } catch (error) {
+        console.error('Failed to write to sandbox:', error);
+      }
+      
+      // Check if file already exists
+      const existingFile = await storage.getFileByPath(projectId, path);
+      
+      if (existingFile) {
+        // Update existing file
+        const updated = await storage.updateFile(existingFile.id, {
+          s3Key,
+          size: Buffer.byteLength(content, 'utf-8'),
+        });
+        res.json(updated);
+      } else {
+        // Create new file
+        const file = await storage.createFile({
+          projectId,
+          path,
+          s3Key,
+          size: Buffer.byteLength(content, 'utf-8'),
+        });
+        res.json(file);
+      }
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.delete("/api/files/:fileId", requireAuth, async (req: Request, res) => {
+    try {
+      const file = await storage.getFile(req.params.fileId);
+      if (!file) {
+        return res.status(404).json({ error: "File not found" });
+      }
+      
+      if (!(await checkProjectOwnership(file.projectId, req.userId!))) {
+        return res.status(403).json({ error: "Forbidden: Access denied" });
+      }
+      
+      // Delete from S3
+      await deleteFileFromS3(file.s3Key);
+      
+      // Delete from database
+      await storage.deleteFile(req.params.fileId);
+      res.json({ success: true });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // E2B Sandbox operations
+  app.post("/api/sandbox/:projectId/execute", requireAuth, async (req: Request, res) => {
+    try {
+      if (!(await checkProjectOwnership(req.params.projectId, req.userId!))) {
+        return res.status(403).json({ error: "Forbidden: Access denied" });
+      }
+      
+      const { code, language } = req.body;
+      const result = await executeCode(req.params.projectId, code, language);
+      res.json(result);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.post("/api/sandbox/:projectId/shell", requireAuth, async (req: Request, res) => {
+    try {
+      if (!(await checkProjectOwnership(req.params.projectId, req.userId!))) {
+        return res.status(403).json({ error: "Forbidden: Access denied" });
+      }
+      
+      const { command } = req.body;
+      const result = await executeShellCommand(req.params.projectId, command);
+      res.json(result);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.get("/api/sandbox/:projectId/url", requireAuth, async (req: Request, res) => {
+    try {
+      if (!(await checkProjectOwnership(req.params.projectId, req.userId!))) {
+        return res.status(403).json({ error: "Forbidden: Access denied" });
+      }
+      
+      const project = await storage.getProject(req.params.projectId);
+      if (project?.sandboxUrl) {
+        res.json({ url: project.sandboxUrl });
+      } else {
+        const url = await getSandboxUrl(req.params.projectId);
+        res.json({ url });
+      }
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Messages - Chat with AI
   app.get("/api/messages/:projectId", requireAuth, async (req: Request, res) => {
     try {
-      // Check ownership
       if (!(await checkProjectOwnership(req.params.projectId, req.userId!))) {
         return res.status(403).json({ error: "Forbidden: Access denied" });
       }
@@ -216,232 +269,122 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/messages", requireAuth, async (req: Request, res) => {
+  app.post("/api/messages/stream", requireAuth, async (req: Request, res) => {
     try {
       const { projectId, content } = req.body;
       
-      // Check ownership
       if (!(await checkProjectOwnership(projectId, req.userId!))) {
         return res.status(403).json({ error: "Forbidden: Access denied" });
       }
-      
+
       // Save user message
-      const userMessage = await storage.createMessage({
+      await storage.createMessage({
         projectId,
         role: "user",
         content,
-        toolCalls: null,
       });
 
-      // Get project for context
-      const project = await storage.getProject(projectId);
-      if (!project) {
-        return res.status(404).json({ error: "Project not found" });
-      }
-
-      // Get conversation history
-      const history = await storage.getMessagesByProjectId(projectId);
-      const messages = history.slice(-10).map(m => ({
-        role: m.role as "user" | "assistant",
-        content: m.content,
+      // Get previous messages for context
+      const previousMessages = await storage.getMessagesByProjectId(projectId);
+      const aiMessages = previousMessages.map(msg => ({
+        role: msg.role as "user" | "assistant",
+        content: msg.content,
       }));
 
-      // Call AI
-      const aiResponse = await chatWithAI(messages, SYSTEM_PROMPT);
+      // Add current user message
+      aiMessages.push({ role: "user" as const, content });
 
-      // Process tool calls
-      const toolResults: any[] = [];
-      if (aiResponse.toolCalls && aiResponse.toolCalls.length > 0) {
-        for (const tool of aiResponse.toolCalls) {
+      // Set up SSE
+      res.setHeader('Content-Type', 'text/event-stream');
+      res.setHeader('Cache-Control', 'no-cache');
+      res.setHeader('Connection', 'keep-alive');
+
+      let fullResponse = '';
+      const toolCalls: any[] = [];
+
+      try {
+        for await (const chunk of chatWithAIStream(aiMessages, SYSTEM_PROMPT)) {
+          fullResponse += chunk;
+          res.write(`data: ${JSON.stringify({ type: 'chunk', content: chunk })}\n\n`);
+        }
+
+        // Parse tool calls from the full response
+        const toolCallMatches = fullResponse.matchAll(/\[tool:(\w+)\](\{(?:[^{}]|\{[^}]*\})*\})/g);
+        
+        for (const match of toolCallMatches) {
+          const toolName = match[1];
+          const args = JSON.parse(match[2]);
+          
+          // Execute tool calls
           try {
-            let result;
-            const summary = getToolCallSummary(tool.name, tool.arguments);
-            
-            switch (tool.name) {
-              case "write_file":
-                if (project.githubToken && project.githubOwner && project.githubRepoName) {
-                  try {
-                    const [, repo] = project.githubRepoName.split("/");
-                    const decryptedToken = decryptToken(project.githubToken);
-                    await writeFile(
-                      decryptedToken,
-                      project.githubOwner,
-                      repo,
-                      tool.arguments.path,
-                      tool.arguments.content,
-                      `AI: Create/update ${tool.arguments.path}`
-                    );
-                    result = { status: "success", message: `File ${tool.arguments.path} saved to GitHub` };
-                  } catch (error: any) {
-                    if (error.status === 401) {
-                      result = { status: "error", message: "GitHub token expired. Please reconnect your repository." };
-                    } else {
-                      result = { status: "error", message: `Failed to write file: ${error.message}` };
-                    }
-                  }
-                } else {
-                  result = { status: "error", message: "GitHub not connected. Please connect a repository first." };
-                }
-                break;
-
-              case "edit_file":
-                if (project.githubToken && project.githubOwner && project.githubRepoName) {
-                  try {
-                    const [, repo] = project.githubRepoName.split("/");
-                    const decryptedToken = decryptToken(project.githubToken);
-                    const existing = await getFileContent(
-                      decryptedToken,
-                      project.githubOwner,
-                      repo,
-                      tool.arguments.path
-                    );
-                    const updated = existing.replace(
-                      tool.arguments.search,
-                      tool.arguments.replace
-                    );
-                    await writeFile(
-                      decryptedToken,
-                      project.githubOwner,
-                      repo,
-                      tool.arguments.path,
-                      updated,
-                      `AI: Edit ${tool.arguments.path}`
-                    );
-                    result = { status: "success", message: `File ${tool.arguments.path} updated on GitHub` };
-                  } catch (error: any) {
-                    if (error.status === 401) {
-                      result = { status: "error", message: "GitHub token expired. Please reconnect your repository." };
-                    } else {
-                      result = { status: "error", message: `Failed to edit file: ${error.message}` };
-                    }
-                  }
-                } else {
-                  result = { status: "error", message: "GitHub not connected. Please connect a repository first." };
-                }
-                break;
-
-              case "serper_web_search":
-                const searchResults = await webSearch(tool.arguments.query);
-                result = { status: "success", data: searchResults };
-                break;
-
-              case "configure_run_button":
-                await storage.updateProject(projectId, {
-                  runCommand: tool.arguments.command,
+            if (toolName === 'write_file') {
+              const { path, content: fileContent } = args;
+              
+              // Upload to S3
+              const s3Key = await uploadFileToS3(projectId, path, fileContent);
+              
+              // Write to E2B sandbox
+              await writeFileToSandbox(projectId, path, fileContent);
+              
+              // Save to database
+              const existingFile = await storage.getFileByPath(projectId, path);
+              if (existingFile) {
+                await storage.updateFile(existingFile.id, {
+                  s3Key,
+                  size: Buffer.byteLength(fileContent, 'utf-8'),
                 });
-                result = { status: "success", message: `Run command set to: ${tool.arguments.command}` };
-                break;
-
-              case "run_app":
-                result = { status: "success", message: "Use the Preview tab to run your app" };
-                break;
-
-              default:
-                result = { status: "error", message: `Unknown tool: ${tool.name}` };
+              } else {
+                await storage.createFile({
+                  projectId,
+                  path,
+                  s3Key,
+                  size: Buffer.byteLength(fileContent, 'utf-8'),
+                });
+              }
+              
+              const summary = `Created ${path}`;
+              toolCalls.push({ name: toolName, arguments: args, summary });
+              res.write(`data: ${JSON.stringify({ type: 'tool', name: toolName, summary })}\n\n`);
+            } else if (toolName === 'run_shell') {
+              const { command } = args;
+              const result = await executeShellCommand(projectId, command);
+              const summary = `Ran: ${command}`;
+              toolCalls.push({ name: toolName, arguments: args, summary, result });
+              res.write(`data: ${JSON.stringify({ type: 'tool', name: toolName, summary, result })}\n\n`);
+            } else if (toolName === 'run_code') {
+              const { code, language } = args;
+              const result = await executeCode(projectId, code, language);
+              const summary = `Executed ${language} code`;
+              toolCalls.push({ name: toolName, arguments: args, summary, result });
+              res.write(`data: ${JSON.stringify({ type: 'tool', name: toolName, summary, result })}\n\n`);
+            } else if (toolName === 'serper_web_search') {
+              const { query } = args;
+              const results = await webSearch(query);
+              const summary = `Searched: ${query}`;
+              toolCalls.push({ name: toolName, arguments: args, summary, results });
+              res.write(`data: ${JSON.stringify({ type: 'tool', name: toolName, summary })}\n\n`);
             }
-
-            toolResults.push({ name: tool.name, summary, ...result });
-          } catch (error: any) {
-            const summary = getToolCallSummary(tool.name, tool.arguments);
-            toolResults.push({ name: tool.name, summary, status: "error", message: error.message });
+          } catch (toolError: any) {
+            console.error(`Tool execution error (${toolName}):`, toolError);
+            res.write(`data: ${JSON.stringify({ type: 'error', message: toolError.message })}\n\n`);
           }
         }
+
+        // Save assistant message
+        await storage.createMessage({
+          projectId,
+          role: "assistant",
+          content: fullResponse,
+          toolCalls: toolCalls.length > 0 ? toolCalls : null,
+        });
+
+        res.write(`data: ${JSON.stringify({ type: 'done' })}\n\n`);
+        res.end();
+      } catch (error: any) {
+        console.error('Streaming error:', error);
+        res.write(`data: ${JSON.stringify({ type: 'error', message: error.message })}\n\n`);
+        res.end();
       }
-
-      // Save AI response
-      const aiMessage = await storage.createMessage({
-        projectId,
-        role: "assistant",
-        content: aiResponse.content,
-        toolCalls: toolResults.length > 0 ? toolResults : null,
-      });
-
-      res.json(aiMessage);
-    } catch (error: any) {
-      res.status(500).json({ error: error.message });
-    }
-  });
-
-  // E2B Sandbox management (requires authentication and ownership)
-  app.get("/api/sandbox/status/:projectId", requireAuth, async (req: Request, res) => {
-    try {
-      // Check ownership
-      if (!(await checkProjectOwnership(req.params.projectId, req.userId!))) {
-        return res.status(403).json({ error: "Forbidden: Access denied" });
-      }
-      
-      const status = sandboxes.get(req.params.projectId) || {
-        sandboxId: null,
-        running: false,
-        url: null,
-        logs: [],
-      };
-      res.json(status);
-    } catch (error: any) {
-      res.status(500).json({ error: error.message });
-    }
-  });
-
-  app.post("/api/sandbox/run", requireAuth, async (req: Request, res) => {
-    try {
-      const { projectId } = req.body;
-      
-      // Check ownership
-      if (!(await checkProjectOwnership(projectId, req.userId!))) {
-        return res.status(403).json({ error: "Forbidden: Access denied" });
-      }
-      
-      const project = await storage.getProject(projectId);
-      
-      if (!project) {
-        return res.status(404).json({ error: "Project not found" });
-      }
-
-      if (!project.runCommand) {
-        return res.status(400).json({ error: "No run command configured. Ask the AI to configure a run command first." });
-      }
-
-      if (!project.githubToken || !project.githubOwner || !project.githubRepoName) {
-        return res.status(400).json({ error: "GitHub repository not connected. Connect your repository first." });
-      }
-
-      // Mock E2B sandbox creation with proper port (3000)
-      // In production, use: const sandbox = await Sandbox.create()
-      const sandboxId = `sb_${Date.now()}`;
-      const url = `https://sandbox-${sandboxId}.e2b.dev`; // Mock URL
-      
-      sandboxes.set(projectId, {
-        sandboxId,
-        url,
-        running: true,
-        logs: [
-          `Starting E2B sandbox...`,
-          `Cloning repository from GitHub...`,
-          `Installing dependencies...`,
-          `Running: ${project.runCommand}`,
-          `Application started successfully`,
-          `Server listening on port 3000`,
-          `Preview available at ${url}`,
-        ],
-      });
-
-      res.json(sandboxes.get(projectId));
-    } catch (error: any) {
-      res.status(500).json({ error: error.message });
-    }
-  });
-
-  app.post("/api/sandbox/stop", requireAuth, async (req: Request, res) => {
-    try {
-      const { projectId } = req.body;
-      
-      // Check ownership
-      if (!(await checkProjectOwnership(projectId, req.userId!))) {
-        return res.status(403).json({ error: "Forbidden: Access denied" });
-      }
-      
-      sandboxes.delete(projectId);
-      res.json({ success: true });
     } catch (error: any) {
       res.status(500).json({ error: error.message });
     }

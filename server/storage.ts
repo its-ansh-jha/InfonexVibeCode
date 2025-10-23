@@ -1,12 +1,13 @@
 // Database storage implementation - referenced from javascript_database blueprint
 import { 
-  users, projects, messages,
+  users, projects, messages, files,
   type User, type InsertUser,
   type Project, type InsertProject, type UpdateProject,
-  type Message, type InsertMessage
+  type Message, type InsertMessage,
+  type File, type InsertFile, type UpdateFile
 } from "@shared/schema";
 import { db } from "./db";
-import { eq, desc } from "drizzle-orm";
+import { eq, desc, and } from "drizzle-orm";
 
 export interface IStorage {
   // Users
@@ -20,6 +21,15 @@ export interface IStorage {
   createProject(project: InsertProject): Promise<Project>;
   updateProject(id: string, project: UpdateProject): Promise<Project>;
   deleteProject(id: string): Promise<void>;
+  
+  // Files
+  getFile(id: string): Promise<File | undefined>;
+  getFilesByProjectId(projectId: string): Promise<File[]>;
+  getFileByPath(projectId: string, path: string): Promise<File | undefined>;
+  createFile(file: InsertFile): Promise<File>;
+  updateFile(id: string, file: UpdateFile): Promise<File>;
+  deleteFile(id: string): Promise<void>;
+  deleteFilesByProjectId(projectId: string): Promise<void>;
   
   // Messages
   getMessagesByProjectId(projectId: string): Promise<Message[]>;
@@ -86,6 +96,53 @@ export class DatabaseStorage implements IStorage {
 
   async deleteProject(id: string): Promise<void> {
     await db.delete(projects).where(eq(projects.id, id));
+  }
+
+  // Files
+  async getFile(id: string): Promise<File | undefined> {
+    const [file] = await db.select().from(files).where(eq(files.id, id));
+    return file || undefined;
+  }
+
+  async getFilesByProjectId(projectId: string): Promise<File[]> {
+    return await db
+      .select()
+      .from(files)
+      .where(eq(files.projectId, projectId))
+      .orderBy(files.path);
+  }
+
+  async getFileByPath(projectId: string, path: string): Promise<File | undefined> {
+    const [file] = await db
+      .select()
+      .from(files)
+      .where(and(eq(files.projectId, projectId), eq(files.path, path)));
+    return file || undefined;
+  }
+
+  async createFile(file: InsertFile): Promise<File> {
+    const [newFile] = await db
+      .insert(files)
+      .values(file)
+      .returning();
+    return newFile;
+  }
+
+  async updateFile(id: string, file: UpdateFile): Promise<File> {
+    const [updatedFile] = await db
+      .update(files)
+      .set({ ...file, updatedAt: new Date() })
+      .where(eq(files.id, id))
+      .returning();
+    return updatedFile;
+  }
+
+  async deleteFile(id: string): Promise<void> {
+    await db.delete(files).where(eq(files.id, id));
+  }
+
+  async deleteFilesByProjectId(projectId: string): Promise<void> {
+    await db.delete(files).where(eq(files.projectId, projectId));
   }
 
   // Messages

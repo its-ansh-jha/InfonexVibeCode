@@ -1,4 +1,4 @@
-import { MessageSquare, FolderGit2, Play, FolderOpen, LogOut, Code2 } from "lucide-react";
+import { MessageSquare, FileText, Play, FolderOpen, LogOut, Code2 } from "lucide-react";
 import {
   Sidebar,
   SidebarContent,
@@ -32,9 +32,9 @@ const projectMenuItems = [
     icon: MessageSquare,
   },
   {
-    title: "Repository",
-    url: "/repository",
-    icon: FolderGit2,
+    title: "Files",
+    url: "/files",
+    icon: FileText,
   },
   {
     title: "Preview",

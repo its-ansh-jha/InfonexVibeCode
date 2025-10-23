@@ -13,7 +13,7 @@ import { MobileNav } from "@/components/MobileNav";
 import LoginPage from "@/pages/LoginPage";
 import ProjectsPage from "@/pages/ProjectsPage";
 import ChatPage from "@/pages/ChatPage";
-import RepositoryPage from "@/pages/RepositoryPage";
+import FilesPage from "@/pages/FilesPage";
 import PreviewPage from "@/pages/PreviewPage";
 import NotFound from "@/pages/not-found";
 import { Loader2 } from "lucide-react";
@@ -58,8 +58,8 @@ function Router() {
       <Route path="/project/:id/chat">
         <ProtectedRoute component={ChatPage} />
       </Route>
-      <Route path="/project/:id/repository">
-        <ProtectedRoute component={RepositoryPage} />
+      <Route path="/project/:id/files">
+        <ProtectedRoute component={FilesPage} />
       </Route>
       <Route path="/project/:id/preview">
         <ProtectedRoute component={PreviewPage} />

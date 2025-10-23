@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm";
-import { pgTable, text, varchar, timestamp, jsonb, boolean } from "drizzle-orm/pg-core";
+import { pgTable, text, varchar, timestamp, jsonb, integer } from "drizzle-orm/pg-core";
 import { relations } from "drizzle-orm";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
@@ -13,18 +13,27 @@ export const users = pgTable("users", {
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
-// Projects table
+// Projects table - Apps created by users
 export const projects = pgTable("projects", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
   name: text("name").notNull(),
   description: text("description"),
-  githubRepoUrl: text("github_repo_url"),
-  githubRepoName: text("github_repo_name"),
-  githubOwner: text("github_owner"),
-  githubToken: text("github_token"), // Encrypted with AES-256-GCM before storage
-  runCommand: text("run_command"),
-  sandboxId: text("sandbox_id"),
+  s3Prefix: text("s3_prefix"), // Folder path in S3 bucket for this project
+  sandboxId: text("sandbox_id"), // E2B sandbox ID
+  sandboxUrl: text("sandbox_url"), // E2B sandbox preview URL
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+// Files table - Track files stored in S3 for each project
+export const files = pgTable("files", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  projectId: varchar("project_id").notNull().references(() => projects.id, { onDelete: "cascade" }),
+  path: text("path").notNull(), // File path relative to project root
+  s3Key: text("s3_key").notNull(), // Full S3 key
+  size: integer("size"), // File size in bytes
+  mimeType: text("mime_type"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
@@ -49,7 +58,15 @@ export const projectsRelations = relations(projects, ({ one, many }) => ({
     fields: [projects.userId],
     references: [users.id],
   }),
+  files: many(files),
   messages: many(messages),
+}));
+
+export const filesRelations = relations(files, ({ one }) => ({
+  project: one(projects, {
+    fields: [files.projectId],
+    references: [projects.id],
+  }),
 }));
 
 export const messagesRelations = relations(messages, ({ one }) => ({
@@ -70,12 +87,19 @@ export const insertProjectSchema = createInsertSchema(projects).omit({
   updatedAt: true,
 });
 
+export const insertFileSchema = createInsertSchema(files).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
 export const insertMessageSchema = createInsertSchema(messages).omit({
   id: true,
   createdAt: true,
 });
 
 export const updateProjectSchema = insertProjectSchema.partial();
+export const updateFileSchema = insertFileSchema.partial();
 
 // Types
 export type User = typeof users.$inferSelect;
@@ -84,6 +108,10 @@ export type InsertUser = z.infer<typeof insertUserSchema>;
 export type Project = typeof projects.$inferSelect;
 export type InsertProject = z.infer<typeof insertProjectSchema>;
 export type UpdateProject = z.infer<typeof updateProjectSchema>;
+
+export type File = typeof files.$inferSelect;
+export type InsertFile = z.infer<typeof insertFileSchema>;
+export type UpdateFile = z.infer<typeof updateFileSchema>;
 
 export type Message = typeof messages.$inferSelect;
 export type InsertMessage = z.infer<typeof insertMessageSchema>;

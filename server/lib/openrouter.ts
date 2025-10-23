@@ -61,11 +61,84 @@ export async function chatWithAI(
   };
 }
 
+// Streaming version of chatWithAI
+export async function* chatWithAIStream(
+  messages: Message[],
+  systemPrompt?: string
+): AsyncGenerator<string, void, unknown> {
+  const apiKey = process.env.OPENROUTER_API_KEY;
+  if (!apiKey) {
+    throw new Error("OPENROUTER_API_KEY is not set");
+  }
+
+  const fullMessages = systemPrompt
+    ? [{ role: "system" as const, content: systemPrompt }, ...messages]
+    : messages;
+
+  const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+    method: "POST",
+    headers: {
+      "Authorization": `Bearer ${apiKey}`,
+      "HTTP-Referer": "https://replit.com",
+      "X-Title": "Vibe Code Platform",
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      model: "z-ai/glm-4.5-air:free",
+      messages: fullMessages,
+      stream: true,
+      provider: {
+        sort: "throughput",
+      },
+    }),
+  });
+
+  if (!response.ok) {
+    const error = await response.text();
+    throw new Error(`OpenRouter API error: ${error}`);
+  }
+
+  if (!response.body) {
+    throw new Error("Response body is null");
+  }
+
+  const reader = response.body.getReader();
+  const decoder = new TextDecoder();
+
+  try {
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+
+      const chunk = decoder.decode(value);
+      const lines = chunk.split('\n').filter(line => line.trim() !== '');
+
+      for (const line of lines) {
+        if (line.startsWith('data: ')) {
+          const data = line.slice(6);
+          if (data === '[DONE]') continue;
+
+          try {
+            const parsed = JSON.parse(data);
+            const content = parsed.choices[0]?.delta?.content;
+            if (content) {
+              yield content;
+            }
+          } catch (e) {
+            // Skip parsing errors
+          }
+        }
+      }
+    }
+  } finally {
+    reader.releaseLock();
+  }
+}
+
 function parseToolCalls(content: string): ToolCall[] {
   const tools: ToolCall[] = [];
   
   // Match tool call patterns like: [tool:write_file]{"path":"...","content":"..."}
-  // Use a more robust pattern that handles nested braces
   const toolPattern = /\[tool:(\w+)\](\{(?:[^{}]|\{[^}]*\})*\})/g;
   let match;
 
@@ -76,7 +149,6 @@ function parseToolCalls(content: string): ToolCall[] {
       tools.push({ name: toolName, arguments: args });
     } catch (e) {
       console.error("Failed to parse tool call:", e);
-      // Try to extract tool name at least
       const toolName = match[1];
       console.error(`Tool: ${toolName}, Raw args: ${match[2]}`);
     }
@@ -89,39 +161,41 @@ function parseToolCalls(content: string): ToolCall[] {
 export function getToolCallSummary(toolName: string, args: Record<string, any>): string {
   switch (toolName) {
     case "write_file":
-      return `Create file ${args.path}`;
+      return `Created ${args.path}`;
     case "edit_file":
-      return `Edit file ${args.path}`;
+      return `Edited ${args.path}`;
+    case "run_shell":
+      return `Ran shell command: ${args.command}`;
     case "serper_web_search":
-      return `Search: ${args.query}`;
-    case "configure_run_button":
-      return `Configure run: ${args.command}`;
-    case "run_app":
-      return "Run application";
+      return `Searched: ${args.query}`;
+    case "run_code":
+      return `Executed ${args.language} code`;
     default:
       return toolName;
   }
 }
 
-export const SYSTEM_PROMPT = `You are an AI coding assistant integrated into Vibe Code, a platform for AI-powered development.
+export const SYSTEM_PROMPT = `You are an AI coding assistant integrated into Vibe Code, an AI-powered app building platform.
 
 You have access to the following tools:
-- write_file: Create or overwrite a file in the GitHub repository
+- write_file: Create or overwrite a file in the project's S3 storage and E2B sandbox
 - edit_file: Edit specific parts of an existing file
+- run_shell: Execute shell commands in the E2B sandbox terminal
+- run_code: Execute code in the E2B code interpreter (Python/JavaScript)
 - serper_web_search: Search the web for information
-- configure_run_button: Set the command to run the application
-- run_app: Execute the configured run command
 
 IMPORTANT RULES:
-1. All files you create/edit are automatically saved to the connected GitHub repository
-2. When configuring web servers, ALWAYS use port 3000 (the E2B sandbox uses port 3000)
+1. All files you create/edit are automatically saved to S3 storage AND the E2B sandbox
+2. When configuring web servers, ALWAYS use port 3000 (the E2B sandbox preview uses port 3000)
 3. Use 0.0.0.0 as the host when binding ports to make them accessible
+4. The user will NOT see the full code in chat - only a summary like "Created index.html"
+5. File operations happen in the background - user only sees status messages
 
 When using tools, format them as: [tool:tool_name]{"arg1":"value1","arg2":"value2"}
 
-For example:
-[tool:write_file]{"path":"server.js","content":"const express = require('express');\nconst app = express();\napp.listen(3000, '0.0.0.0', () => console.log('Server running on port 3000'));"}
-[tool:configure_run_button]{"command":"node server.js"}
-[tool:run_app]{}
+Examples:
+[tool:write_file]{"path":"index.html","content":"<!DOCTYPE html>\\n<html>\\n<body><h1>Hello World</h1></body>\\n</html>"}
+[tool:run_shell]{"command":"npm install express"}
+[tool:run_code]{"language":"python","code":"print('Hello from Python')"}
 
-Always explain what you're doing and provide helpful context to the user.`;
+Remember: Keep responses concise. The user cares about what you're building, not the full code details.`;

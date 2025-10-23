@@ -324,9 +324,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       }
       
+      // Get project to check for workflow command
+      const project = await storage.getProject(req.params.projectId);
+      
+      // If there's a saved workflow command, run it automatically
+      if (project?.workflowCommand) {
+        try {
+          // Run the workflow command in the background
+          executeShellCommand(req.params.projectId, project.workflowCommand).catch(err => 
+            console.error('Background workflow command error:', err)
+          );
+        } catch (error) {
+          console.error('Failed to run workflow command:', error);
+        }
+      }
+      
       res.json({ 
         url: sandboxInfo.url,
         sandboxId: sandboxInfo.sandboxId,
+        workflowCommand: project?.workflowCommand || null,
         filesSynced: files.length
       });
     } catch (error: any) {
@@ -516,6 +532,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
                 executeShellCommand(projectId, command).catch(err => 
                   console.error('Background command error:', err)
                 );
+                
+                // Save workflow command for auto-restart on sandbox recreation
+                await storage.updateProject(projectId, {
+                  workflowCommand: command
+                });
                 
                 const summary = `Started: ${command}`;
                 toolCalls.push({ name: toolName, arguments: args, summary, result: { 

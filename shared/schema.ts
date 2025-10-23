@@ -22,6 +22,7 @@ export const projects = pgTable("projects", {
   s3Prefix: text("s3_prefix"), // Folder path in S3 bucket for this project
   sandboxId: text("sandbox_id"), // E2B sandbox ID
   sandboxUrl: text("sandbox_url"), // E2B sandbox preview URL
+  workflowCommand: text("workflow_command"), // Command to run when sandbox is created (e.g., "npm run dev")
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });

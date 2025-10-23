@@ -501,10 +501,46 @@ export async function registerRoutes(app: Express): Promise<Server> {
               res.write(`data: ${JSON.stringify({ type: 'tool', name: toolName, summary })}\n\n`);
             } else if (toolName === 'run_shell') {
               const { command } = args;
-              const result = await executeShellCommand(projectId, command);
-              const summary = `Ran: ${command}`;
-              toolCalls.push({ name: toolName, arguments: args, summary, result });
-              res.write(`data: ${JSON.stringify({ type: 'tool', name: toolName, summary, result })}\n\n`);
+              
+              // Check if this is a long-running server command
+              const isServerCommand = command.includes('python -m http.server') || 
+                                     command.includes('npm start') || 
+                                     command.includes('npm run dev') ||
+                                     command.includes('node ') ||
+                                     command.match(/python\s+.*\.py/) ||
+                                     command.includes('flask run') ||
+                                     command.includes('streamlit run');
+              
+              if (isServerCommand) {
+                // For server commands, start in background and don't wait
+                executeShellCommand(projectId, command).catch(err => 
+                  console.error('Background command error:', err)
+                );
+                
+                const summary = `Started: ${command}`;
+                toolCalls.push({ name: toolName, arguments: args, summary, result: { 
+                  stdout: 'Server started in background',
+                  stderr: '',
+                  exitCode: 0
+                }});
+                res.write(`data: ${JSON.stringify({ type: 'tool', name: toolName, summary })}\n\n`);
+              } else {
+                // For regular commands, wait for completion with timeout
+                const result = await Promise.race([
+                  executeShellCommand(projectId, command),
+                  new Promise<any>((_, reject) => 
+                    setTimeout(() => reject(new Error('Command timeout')), 10000)
+                  )
+                ]).catch(err => ({
+                  stdout: '',
+                  stderr: err.message === 'Command timeout' ? 'Command timed out (running in background)' : err.message,
+                  exitCode: err.message === 'Command timeout' ? 0 : 1
+                }));
+                
+                const summary = `Ran: ${command}`;
+                toolCalls.push({ name: toolName, arguments: args, summary, result });
+                res.write(`data: ${JSON.stringify({ type: 'tool', name: toolName, summary, result })}\n\n`);
+              }
             } else if (toolName === 'run_code') {
               const { code, language } = args;
               const result = await executeCode(projectId, code, language);

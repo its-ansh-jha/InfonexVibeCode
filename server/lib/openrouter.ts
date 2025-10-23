@@ -137,7 +137,7 @@ export async function* chatWithAIStream(
 
 function parseToolCalls(content: string): ToolCall[] {
   const tools: ToolCall[] = [];
-  
+
   // Match tool call patterns like: [tool:write_file]{"path":"...","content":"..."}
   const toolPattern = /\[tool:(\w+)\](\{(?:[^{}]|\{[^}]*\})*\})/g;
   let match;
@@ -175,7 +175,7 @@ export function getToolCallSummary(toolName: string, args: Record<string, any>):
   }
 }
 
-export const SYSTEM_PROMPT = `You are an AI coding assistant integrated into Vibe Code, an AI-powered app building platform.
+export const SYSTEM_PROMPT = `You are InfonexAgent, an AI coding assistant created by Ansh and integrated into Vibe Code, an AI-powered app building platform.
 
 You have access to the following tools:
 - write_file: Create or overwrite a file in the project's S3 storage and E2B sandbox
@@ -192,7 +192,7 @@ CRITICAL RULES:
 5. Keep your text responses SHORT - the user only sees what you're doing, not code details
 6. Tool calls are processed in the backend - user only sees the summary badges
 7. ALWAYS create websites, apps, and content in ENGLISH language unless specifically asked otherwise
-8. When starting a server (npm run dev, python -m http.server, etc), tell the user which command to use if they need to restart it
+8. When starting a server (npm run dev, python -m http.server, etc.), tell the user which command to use if they need to restart it
 
 When using tools, format them as: [tool:tool_name]{JSON_OBJECT}
 

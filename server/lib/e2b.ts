@@ -151,6 +151,14 @@ export async function closeSandbox(projectId: string): Promise<void> {
   }
 }
 
+export async function recreateSandbox(projectId: string): Promise<SandboxInfo> {
+  // Close existing sandbox if any
+  await closeSandbox(projectId);
+  
+  // Create new sandbox
+  return await createSandbox(projectId);
+}
+
 export async function getSandboxUrl(projectId: string, port: number = 3000): Promise<string> {
   const sandbox = await getOrCreateSandbox(projectId);
   return `https://${sandbox.getHost(port)}`;
@@ -160,11 +168,13 @@ export async function getSandboxStatus(projectId: string): Promise<{
   isActive: boolean; 
   hasRunningProcesses: boolean;
   processCount: number;
+  isExpired: boolean;
+  error?: string;
 }> {
   try {
     const sandbox = activeSandboxes.get(projectId);
     if (!sandbox) {
-      return { isActive: false, hasRunningProcesses: false, processCount: 0 };
+      return { isActive: false, hasRunningProcesses: false, processCount: 0, isExpired: false };
     }
 
     const processes = await sandbox.commands.list();
@@ -172,10 +182,22 @@ export async function getSandboxStatus(projectId: string): Promise<{
     return { 
       isActive: true, 
       hasRunningProcesses: processes.length > 0,
-      processCount: processes.length
+      processCount: processes.length,
+      isExpired: false
     };
   } catch (error: any) {
-    return { isActive: false, hasRunningProcesses: false, processCount: 0 };
+    // Check if error indicates sandbox is expired/not found
+    const isExpired = error.message?.includes('not found') || 
+                      error.message?.includes('expired') ||
+                      error.message?.includes('does not exist');
+    
+    return { 
+      isActive: false, 
+      hasRunningProcesses: false, 
+      processCount: 0,
+      isExpired,
+      error: error.message
+    };
   }
 }
 

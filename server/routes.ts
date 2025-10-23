@@ -14,7 +14,8 @@ import {
   getSandboxUrl,
   closeSandbox,
   getSandboxStatus,
-  checkSandboxPort
+  checkSandboxPort,
+  recreateSandbox
 } from "./lib/e2b";
 
 async function checkProjectOwnership(projectId: string, userId: string): Promise<boolean> {
@@ -344,6 +345,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         } else if (!port3000Active && !sandboxStatus.hasRunningProcesses) {
           sandboxContext += `\nNOTE: No server is running. If the user wants to see the preview, you need to start a web server on port 3000 using 0.0.0.0 as host.\n`;
         }
+      } else if (sandboxStatus.isExpired) {
+        sandboxContext = `\n\n[SANDBOX STATUS]\n`;
+        sandboxContext += `- Status: EXPIRED OR NOT FOUND\n`;
+        sandboxContext += `- Error: ${sandboxStatus.error}\n`;
+        sandboxContext += `\nACTION REQUIRED: Use the recreate_sandbox tool immediately to create a new sandbox before performing any file or execution operations.\n`;
       }
 
       // Get previous messages for context
@@ -463,6 +469,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
               const results = await webSearch(query);
               const summary = `Searched: ${query}`;
               toolCalls.push({ name: toolName, arguments: args, summary, results });
+              res.write(`data: ${JSON.stringify({ type: 'tool', name: toolName, summary })}\n\n`);
+            } else if (toolName === 'recreate_sandbox') {
+              const sandboxInfo = await recreateSandbox(projectId);
+              
+              // Update project with new sandbox info
+              await storage.updateProject(projectId, {
+                sandboxId: sandboxInfo.sandboxId,
+                sandboxUrl: sandboxInfo.url,
+              });
+              
+              const summary = `Recreated sandbox`;
+              toolCalls.push({ name: toolName, arguments: args, summary, sandboxInfo });
               res.write(`data: ${JSON.stringify({ type: 'tool', name: toolName, summary })}\n\n`);
             }
           } catch (toolError: any) {

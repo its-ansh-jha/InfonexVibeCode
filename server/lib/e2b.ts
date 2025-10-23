@@ -1,4 +1,4 @@
-import CodeInterpreter from '@e2b/code-interpreter';
+import { CodeInterpreter } from '@e2b/code-interpreter';
 
 const E2B_API_KEY = process.env.E2B_API_KEY!;
 
@@ -29,8 +29,8 @@ export async function createSandbox(projectId: string): Promise<SandboxInfo> {
     activeSandboxes.set(projectId, sandbox);
 
     return {
-      sandboxId: sandbox.sandboxId,
-      url: `https://${sandbox.getHost(3000)}`,
+      sandboxId: sandbox.sandboxID,
+      url: `https://${sandbox.getHostname(3000)}`,
     };
   } catch (error: any) {
     throw new Error(`Failed to create E2B sandbox: ${error.message}`);
@@ -160,5 +160,5 @@ export async function closeSandbox(projectId: string): Promise<void> {
 
 export async function getSandboxUrl(projectId: string, port: number = 3000): Promise<string> {
   const sandbox = await getOrCreateSandbox(projectId);
-  return `https://${sandbox.getHost(port)}`;
+  return `https://${sandbox.getHostname(port)}`;
 }

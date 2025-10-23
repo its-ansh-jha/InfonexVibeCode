@@ -1,5 +1,5 @@
 
-import CodeInterpreter from '@e2b/code-interpreter';
+import { Sandbox } from '@e2b/code-interpreter';
 
 const E2B_API_KEY = process.env.E2B_API_KEY!;
 
@@ -15,30 +15,30 @@ export interface ExecutionResult {
   error?: string;
 }
 
-const activeSandboxes = new Map<string, CodeInterpreter>();
+const activeSandboxes = new Map<string, Sandbox>();
 
 export async function createSandbox(projectId: string): Promise<SandboxInfo> {
   try {
-    const sandbox = await CodeInterpreter.create({
+    const sandbox = await Sandbox.create({
       apiKey: E2B_API_KEY,
     });
 
     activeSandboxes.set(projectId, sandbox);
 
     return {
-      sandboxId: sandbox.sandboxID,
-      url: `https://${sandbox.getHostname(3000)}`,
+      sandboxId: sandbox.sandboxId,
+      url: `https://${sandbox.getHost(3000)}`,
     };
   } catch (error: any) {
     throw new Error(`Failed to create E2B sandbox: ${error.message}`);
   }
 }
 
-export async function getSandbox(projectId: string): Promise<CodeInterpreter | null> {
+export async function getSandbox(projectId: string): Promise<Sandbox | null> {
   return activeSandboxes.get(projectId) || null;
 }
 
-export async function getOrCreateSandbox(projectId: string): Promise<CodeInterpreter> {
+export async function getOrCreateSandbox(projectId: string): Promise<Sandbox> {
   let sandbox = activeSandboxes.get(projectId);
   
   if (!sandbox) {
@@ -61,7 +61,7 @@ export async function executeCode(
   try {
     const sandbox = await getOrCreateSandbox(projectId);
     
-    const execution = await sandbox.notebook.execCell(code);
+    const execution = await sandbox.runCode(code);
     
     return {
       stdout: execution.logs.stdout.join('\n'),
@@ -86,13 +86,7 @@ export async function executeShellCommand(
   try {
     const sandbox = await getOrCreateSandbox(projectId);
     
-    // Use the correct process API
-    const proc = await sandbox.process.start({
-      cmd: command,
-    });
-    
-    // Wait for the process to complete
-    const result = await proc.wait();
+    const result = await sandbox.commands.run(command);
     
     return {
       stdout: result.stdout || '',
@@ -152,12 +146,12 @@ export async function closeSandbox(projectId: string): Promise<void> {
   const sandbox = activeSandboxes.get(projectId);
   
   if (sandbox) {
-    await sandbox.close();
+    await sandbox.kill();
     activeSandboxes.delete(projectId);
   }
 }
 
 export async function getSandboxUrl(projectId: string, port: number = 3000): Promise<string> {
   const sandbox = await getOrCreateSandbox(projectId);
-  return `https://${sandbox.getHostname(port)}`;
+  return `https://${sandbox.getHost(port)}`;
 }

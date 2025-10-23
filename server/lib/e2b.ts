@@ -190,3 +190,30 @@ export async function checkSandboxPort(projectId: string, port: number = 3000): 
     return false;
   }
 }
+
+export async function validateSandbox(projectId: string): Promise<boolean> {
+  try {
+    const sandbox = activeSandboxes.get(projectId);
+    if (!sandbox) return false;
+
+    // Try to execute a simple command to check if sandbox is still alive
+    const result = await sandbox.commands.run('echo "alive"');
+    return result.exitCode === 0;
+  } catch (error) {
+    console.error('Sandbox validation failed:', error);
+    return false;
+  }
+}
+
+export async function recreateSandbox(projectId: string): Promise<SandboxInfo> {
+  try {
+    // Close existing sandbox if any
+    await closeSandbox(projectId);
+
+    // Create new sandbox
+    const sandboxInfo = await createSandbox(projectId);
+    return sandboxInfo;
+  } catch (error: any) {
+    throw new Error(`Failed to recreate sandbox: ${error.message}`);
+  }
+}

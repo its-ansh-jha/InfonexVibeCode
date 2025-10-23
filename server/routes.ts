@@ -2,7 +2,7 @@ import type { Express, Request } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { requireAuth } from "./middleware/auth";
-import { chatWithAIStream, SYSTEM_PROMPT, getToolCallSummary } from "./lib/openrouter";
+import { chatWithAIStream, SYSTEM_PROMPT, getToolCallSummary } from "./lib/gemini";
 import { webSearch } from "./lib/serper";
 import { insertProjectSchema, insertMessageSchema, insertFileSchema } from "@shared/schema";
 import { uploadFileToS3, getFileFromS3, deleteFileFromS3, deleteProjectFilesFromS3 } from "./lib/s3";

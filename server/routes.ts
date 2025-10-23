@@ -306,26 +306,51 @@ export async function registerRoutes(app: Express): Promise<Server> {
         for await (const chunk of chatWithAIStream(aiMessages, SYSTEM_PROMPT)) {
           fullResponse += chunk;
           
-          // Only send non-tool content to UI
-          const cleanChunk = chunk.replace(/\[tool:\w+\]\{[^}]*\}/g, '');
-          if (cleanChunk.trim()) {
-            res.write(`data: ${JSON.stringify({ type: 'chunk', content: cleanChunk })}\n\n`);
-          }
+          // Don't try to strip tool calls during streaming - just collect the response
+          // We'll parse tools after streaming is complete
+          res.write(`data: ${JSON.stringify({ type: 'chunk', content: chunk })}\n\n`);
         }
+        
+        // Remove tool calls from the response before saving
+        const cleanResponse = fullResponse.replace(/\[tool:\w+\]\{[\s\S]*?\}\s*(?=\[tool:|\n\n|$)/g, '').trim();
 
         // Parse tool calls from the full response with better error handling
-        const toolCallMatches = fullResponse.matchAll(/\[tool:(\w+)\](\{[^}]*\})/g);
+        // Use a more robust regex that handles multi-line JSON
+        const toolCallPattern = /\[tool:(\w+)\](\{[\s\S]*?\})\s*(?=\[tool:|\n\n|$)/g;
+        const toolCallMatches = fullResponse.matchAll(toolCallPattern);
         
         for (const match of toolCallMatches) {
           const toolName = match[1];
+          let jsonStr = match[2];
           let args;
           
           try {
-            args = JSON.parse(match[2]);
+            // Try to parse the JSON directly first
+            args = JSON.parse(jsonStr);
           } catch (parseError) {
-            console.error(`Failed to parse tool arguments for ${toolName}:`, match[2]);
-            res.write(`data: ${JSON.stringify({ type: 'error', message: `Failed to parse ${toolName} arguments` })}\n\n`);
-            continue;
+            // If that fails, try to extract and clean the JSON more carefully
+            try {
+              // Find the complete JSON object by counting braces
+              let braceCount = 0;
+              let startIdx = jsonStr.indexOf('{');
+              let endIdx = startIdx;
+              
+              for (let i = startIdx; i < jsonStr.length; i++) {
+                if (jsonStr[i] === '{') braceCount++;
+                if (jsonStr[i] === '}') braceCount--;
+                if (braceCount === 0) {
+                  endIdx = i + 1;
+                  break;
+                }
+              }
+              
+              jsonStr = jsonStr.substring(startIdx, endIdx);
+              args = JSON.parse(jsonStr);
+            } catch (secondError) {
+              console.error(`Failed to parse tool arguments for ${toolName}:`, jsonStr.substring(0, 200));
+              res.write(`data: ${JSON.stringify({ type: 'error', message: `Failed to parse ${toolName} arguments` })}\n\n`);
+              continue;
+            }
           }
           
           // Execute tool calls
@@ -383,11 +408,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
           }
         }
 
-        // Save assistant message
+        // Save assistant message (without tool call syntax)
         await storage.createMessage({
           projectId,
           role: "assistant",
-          content: fullResponse,
+          content: cleanResponse || "Processing...",
           toolCalls: toolCalls.length > 0 ? toolCalls : null,
         });
 

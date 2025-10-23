@@ -106,7 +106,39 @@ Vibe Code is an AI-powered app building platform that allows users to create app
 - **Interactions**: Subtle hover elevations, smooth transitions
 
 ## Recent Changes
-- **October 23, 2025**: Complete migration from GitHub to S3+E2B architecture
+- **October 23, 2025** (Latest): Major mobile UX and UI enhancements
+  - **Chat Page Improvements**:
+    - Added intelligent code block parsing with syntax detection
+    - Implemented copy-to-clipboard functionality for code snippets
+    - Enhanced mobile responsiveness with proper spacing for all screen sizes (xs, sm, md, lg)
+    - Improved touch targets for better mobile interaction
+    - Added gradient avatars and smooth animations
+    - Fixed input area at bottom on mobile devices for better UX
+    - Auto-resizing textarea for message composition
+  - **Files Page Improvements**:
+    - Added real-time file search/filter functionality
+    - Responsive grid layouts optimized for mobile devices
+    - Enhanced file list display with better touch targets
+    - Improved empty states and loading indicators
+    - Better mobile typography and spacing
+  - **Preview Page Improvements**:
+    - Added fullscreen/minimize toggle for desktop/tablet views
+    - Responsive control bar with mobile-optimized buttons
+    - Better sandbox status indicators (active/expired)
+    - Improved mobile layout with touch-friendly controls
+    - Added responsive iframe container sizing
+  - **Projects Page Fixes**:
+    - Fixed schema issue by removing non-existent githubRepoName field
+    - Now displays sandboxId for better debugging visibility
+    - Maintained responsive card grid layout
+  - **Overall Mobile Enhancements**:
+    - Consistent responsive breakpoints across all pages (sm, md, lg)
+    - Better touch targets (minimum 44px height for interactive elements)
+    - Improved typography scaling for mobile devices
+    - Enhanced spacing and padding for mobile views
+    - Smooth transitions and animations throughout the app
+    
+- **October 23, 2025** (Earlier): Complete migration from GitHub to S3+E2B architecture
   - Removed GitHub integration entirely (Octokit, personal access tokens, repository connection)
   - Implemented AWS S3 file storage with proper encryption and security
   - Integrated real E2B Code Interpreter SDK for code execution and preview

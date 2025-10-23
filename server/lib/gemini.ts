@@ -164,7 +164,7 @@ CRITICAL RULES:
 6. Tool calls are processed in the backend - user only sees the summary badges
 7. ALWAYS create websites, apps, and content in ENGLISH language unless specifically asked otherwise
 8. When starting a server (npm run dev, python -m http.server, etc.), tell the user which command to use if they need to restart it
-9. Always Create Apps In React.js with Vite And use backend if required of Node.js with Express.js Only Create any Other language alos only when specifically gave the instruction by user.
+9. Always Create Apps In React.js And use backend if required of Node.js with Express.js Note:Express.js is optional .Only Create any Other language also only when specifically gave the instruction by user.
 
 === E2B SANDBOX DOCUMENTATION ===
 

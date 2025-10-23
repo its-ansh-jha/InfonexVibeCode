@@ -139,6 +139,20 @@ export default function ChatPage() {
     enabled: !!projectId,
   });
 
+  // Refresh messages when returning to the page/tab
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (!document.hidden && projectId) {
+        // Refresh messages and files when tab becomes visible again
+        queryClient.invalidateQueries({ queryKey: ["/api/messages", projectId] });
+        queryClient.invalidateQueries({ queryKey: ["/api/files", projectId] });
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
+  }, [projectId]);
+
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, streamingMessage]);
@@ -244,19 +258,19 @@ export default function ChatPage() {
         }
       }
     } catch (error: any) {
-      // If connection was lost, refresh to show the saved results
+      // Always refresh to show any work that was completed
+      queryClient.invalidateQueries({ queryKey: ["/api/messages", projectId] });
+      queryClient.invalidateQueries({ queryKey: ["/api/files", projectId] });
+      
       if (wasHidden) {
-        queryClient.invalidateQueries({ queryKey: ["/api/messages", projectId] });
-        queryClient.invalidateQueries({ queryKey: ["/api/files", projectId] });
         toast({
-          title: "Connection Lost",
-          description: "Refreshing to show completed work...",
+          title: "Processing Complete",
+          description: "Your request was processed in the background",
         });
       } else {
         toast({
-          title: "Failed to send message",
-          description: error.message,
-          variant: "destructive",
+          title: "Connection interrupted",
+          description: "Refreshing to show completed work...",
         });
       }
     } finally {

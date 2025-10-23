@@ -160,6 +160,16 @@ export default function ChatPage() {
     setStreamingMessage("");
     setStreamingTools([]);
 
+    // Track if page becomes hidden
+    let wasHidden = false;
+    const handleVisibilityChange = () => {
+      if (document.hidden && isStreaming) {
+        wasHidden = true;
+        console.log('Tab hidden - AI will continue processing in background');
+      }
+    };
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
     try {
       // Get Firebase ID token for authentication
       const idToken = await auth.currentUser?.getIdToken();
@@ -221,17 +231,36 @@ export default function ChatPage() {
             } else if (data.type === 'done') {
               queryClient.invalidateQueries({ queryKey: ["/api/messages", projectId] });
               queryClient.invalidateQueries({ queryKey: ["/api/files", projectId] });
+              
+              // Show notification if tab was hidden
+              if (wasHidden) {
+                toast({
+                  title: "AI Processing Complete",
+                  description: "Your request was processed in the background",
+                });
+              }
             }
           }
         }
       }
     } catch (error: any) {
-      toast({
-        title: "Failed to send message",
-        description: error.message,
-        variant: "destructive",
-      });
+      // If connection was lost, refresh to show the saved results
+      if (wasHidden) {
+        queryClient.invalidateQueries({ queryKey: ["/api/messages", projectId] });
+        queryClient.invalidateQueries({ queryKey: ["/api/files", projectId] });
+        toast({
+          title: "Connection Lost",
+          description: "Refreshing to show completed work...",
+        });
+      } else {
+        toast({
+          title: "Failed to send message",
+          description: error.message,
+          variant: "destructive",
+        });
+      }
     } finally {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
       setIsStreaming(false);
       setStreamingMessage("");
       setStreamingTools([]);

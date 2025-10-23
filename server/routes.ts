@@ -12,7 +12,9 @@ import {
   executeShellCommand, 
   writeFileToSandbox, 
   getSandboxUrl,
-  closeSandbox
+  closeSandbox,
+  getSandboxStatus,
+  checkSandboxPort
 } from "./lib/e2b";
 
 async function checkProjectOwnership(projectId: string, userId: string): Promise<boolean> {
@@ -138,6 +140,40 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       const content = await getFileFromS3(file.s3Key);
       res.json({ ...file, content });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.get("/api/files/:projectId/download", requireAuth, async (req: Request, res) => {
+    try {
+      if (!(await checkProjectOwnership(req.params.projectId, req.userId!))) {
+        return res.status(403).json({ error: "Forbidden: Access denied" });
+      }
+      
+      const files = await storage.getFilesByProjectId(req.params.projectId);
+      const project = await storage.getProject(req.params.projectId);
+      
+      // Create JSON structure of all files
+      const fileContents: Record<string, string> = {};
+      for (const file of files) {
+        try {
+          const content = await getFileFromS3(file.s3Key);
+          fileContents[file.path] = content;
+        } catch (error) {
+          console.error(`Failed to fetch file ${file.path}:`, error);
+        }
+      }
+      
+      const downloadData = {
+        projectName: project?.name || 'project',
+        files: fileContents,
+        exportedAt: new Date().toISOString(),
+      };
+      
+      res.setHeader('Content-Type', 'application/json');
+      res.setHeader('Content-Disposition', `attachment; filename="${project?.name || 'project'}-source.json"`);
+      res.json(downloadData);
     } catch (error: any) {
       res.status(500).json({ error: error.message });
     }
@@ -289,6 +325,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
         content,
       });
 
+      // Get sandbox status and preview state
+      const sandboxStatus = await getSandboxStatus(projectId);
+      const port3000Active = await checkSandboxPort(projectId, 3000);
+      const project = await storage.getProject(projectId);
+      
+      // Build sandbox context for AI
+      let sandboxContext = '';
+      if (sandboxStatus.isActive) {
+        sandboxContext = `\n\n[SANDBOX STATUS]\n`;
+        sandboxContext += `- Sandbox ID: ${project?.sandboxId}\n`;
+        sandboxContext += `- Preview URL: ${project?.sandboxUrl}\n`;
+        sandboxContext += `- Port 3000 accessible: ${port3000Active ? 'YES - Server is running' : 'NO - No server running on port 3000'}\n`;
+        sandboxContext += `- Running processes: ${sandboxStatus.processCount}\n`;
+        
+        if (!port3000Active && sandboxStatus.hasRunningProcesses) {
+          sandboxContext += `\nWARNING: Processes are running but port 3000 is not accessible. The preview won't work until you start a web server on port 3000.\n`;
+        } else if (!port3000Active && !sandboxStatus.hasRunningProcesses) {
+          sandboxContext += `\nNOTE: No server is running. If the user wants to see the preview, you need to start a web server on port 3000 using 0.0.0.0 as host.\n`;
+        }
+      }
+
       // Get previous messages for context
       const previousMessages = await storage.getMessagesByProjectId(projectId);
       const aiMessages = previousMessages.map(msg => ({
@@ -296,8 +353,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         content: msg.content,
       }));
 
-      // Add current user message
-      aiMessages.push({ role: "user" as const, content });
+      // Add current user message with sandbox context
+      const userMessageWithContext = sandboxContext ? `${content}${sandboxContext}` : content;
+      aiMessages.push({ role: "user" as const, content: userMessageWithContext });
 
       // Set up SSE
       res.setHeader('Content-Type', 'text/event-stream');

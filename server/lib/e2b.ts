@@ -155,3 +155,39 @@ export async function getSandboxUrl(projectId: string, port: number = 3000): Pro
   const sandbox = await getOrCreateSandbox(projectId);
   return `https://${sandbox.getHost(port)}`;
 }
+
+export async function getSandboxStatus(projectId: string): Promise<{ 
+  isActive: boolean; 
+  hasRunningProcesses: boolean;
+  processCount: number;
+}> {
+  try {
+    const sandbox = activeSandboxes.get(projectId);
+    if (!sandbox) {
+      return { isActive: false, hasRunningProcesses: false, processCount: 0 };
+    }
+
+    const processes = await sandbox.commands.list();
+    
+    return { 
+      isActive: true, 
+      hasRunningProcesses: processes.length > 0,
+      processCount: processes.length
+    };
+  } catch (error: any) {
+    return { isActive: false, hasRunningProcesses: false, processCount: 0 };
+  }
+}
+
+export async function checkSandboxPort(projectId: string, port: number = 3000): Promise<boolean> {
+  try {
+    const sandbox = activeSandboxes.get(projectId);
+    if (!sandbox) return false;
+
+    const url = `https://${sandbox.getHost(port)}`;
+    const response = await fetch(url, { method: 'HEAD' });
+    return response.ok;
+  } catch {
+    return false;
+  }
+}

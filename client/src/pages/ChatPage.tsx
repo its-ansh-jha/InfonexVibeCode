@@ -179,7 +179,7 @@ export default function ChatPage() {
                 <div
                   key={message.id}
                   className={cn(
-                    "flex gap-4",
+                    "flex gap-4 max-w-full",
                     isUser ? "justify-end" : "justify-start"
                   )}
                   data-testid={`message-${message.role}`}
@@ -192,14 +192,14 @@ export default function ChatPage() {
                     </div>
                   )}
                   <div className={cn(
-                    "flex-1 max-w-3xl space-y-2",
+                    "flex-1 space-y-2 min-w-0",
                     isUser && "flex flex-col items-end"
                   )}>
                     <Card className={cn(
-                      "p-4 overflow-hidden",
+                      "p-4 overflow-hidden max-w-full",
                       isUser ? "bg-primary text-primary-foreground" : "bg-card"
                     )}>
-                      <p className="whitespace-pre-wrap break-words word-break-break-word overflow-wrap-anywhere">{message.content}</p>
+                      <p className="whitespace-pre-wrap break-words word-break-break-word overflow-wrap-anywhere max-w-full">{message.content}</p>
                     </Card>
                     {toolCalls && toolCalls.length > 0 && (
                       <div className="flex flex-wrap gap-2">
@@ -229,14 +229,14 @@ export default function ChatPage() {
             
             {/* Streaming Message */}
             {isStreaming && (
-              <div className="flex gap-4 justify-start">
+              <div className="flex gap-4 justify-start max-w-full">
                 <div className="flex items-center justify-center w-9 h-9 rounded-full bg-primary/10">
                   <Bot className="h-5 w-5 text-primary" />
                 </div>
-                <div className="flex-1 max-w-3xl space-y-2">
-                  <Card className="p-4 bg-card overflow-hidden">
+                <div className="flex-1 space-y-2 min-w-0">
+                  <Card className="p-4 bg-card overflow-hidden max-w-full">
                     {streamingMessage ? (
-                      <p className="whitespace-pre-wrap break-words word-break-break-word overflow-wrap-anywhere">{streamingMessage}</p>
+                      <p className="whitespace-pre-wrap break-words word-break-break-word overflow-wrap-anywhere max-w-full">{streamingMessage}</p>
                     ) : (
                       <div className="flex items-center gap-2">
                         <Loader2 className="h-4 w-4 animate-spin" />

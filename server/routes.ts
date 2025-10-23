@@ -305,15 +305,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
       try {
         for await (const chunk of chatWithAIStream(aiMessages, SYSTEM_PROMPT)) {
           fullResponse += chunk;
-          res.write(`data: ${JSON.stringify({ type: 'chunk', content: chunk })}\n\n`);
+          
+          // Only send non-tool content to UI
+          const cleanChunk = chunk.replace(/\[tool:\w+\]\{[^}]*\}/g, '');
+          if (cleanChunk.trim()) {
+            res.write(`data: ${JSON.stringify({ type: 'chunk', content: cleanChunk })}\n\n`);
+          }
         }
 
-        // Parse tool calls from the full response
-        const toolCallMatches = fullResponse.matchAll(/\[tool:(\w+)\](\{(?:[^{}]|\{[^}]*\})*\})/g);
+        // Parse tool calls from the full response with better error handling
+        const toolCallMatches = fullResponse.matchAll(/\[tool:(\w+)\](\{[^}]*\})/g);
         
         for (const match of toolCallMatches) {
           const toolName = match[1];
-          const args = JSON.parse(match[2]);
+          let args;
+          
+          try {
+            args = JSON.parse(match[2]);
+          } catch (parseError) {
+            console.error(`Failed to parse tool arguments for ${toolName}:`, match[2]);
+            res.write(`data: ${JSON.stringify({ type: 'error', message: `Failed to parse ${toolName} arguments` })}\n\n`);
+            continue;
+          }
           
           // Execute tool calls
           try {

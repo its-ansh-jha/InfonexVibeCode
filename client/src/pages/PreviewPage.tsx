@@ -160,8 +160,8 @@ export default function PreviewPage() {
             </div>
 
             {/* Mobile-sized iframe preview */}
-            <div className="flex-1 bg-muted flex items-start justify-center overflow-auto p-4">
-              <div className="w-full max-w-[375px] h-full bg-background rounded-lg shadow-xl overflow-hidden">
+            <div className="flex-1 bg-muted flex items-start justify-center overflow-auto p-2">
+              <div className="w-full max-w-[320px] h-full bg-background rounded-lg shadow-xl overflow-hidden">
                 <iframe
                   src={previewUrl}
                   className="w-full h-full border-0"

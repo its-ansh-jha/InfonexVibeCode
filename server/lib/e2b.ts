@@ -86,16 +86,18 @@ export async function executeShellCommand(
   try {
     const sandbox = await getOrCreateSandbox(projectId);
     
-    const process = await sandbox.process.start({
+    // Use the correct process API
+    const proc = await sandbox.process.start({
       cmd: command,
     });
     
-    await process.wait();
+    // Wait for the process to complete
+    const result = await proc.wait();
     
     return {
-      stdout: process.output.stdout,
-      stderr: process.output.stderr,
-      exitCode: process.output.exitCode,
+      stdout: result.stdout || '',
+      stderr: result.stderr || '',
+      exitCode: result.exitCode || 0,
     };
   } catch (error: any) {
     return {

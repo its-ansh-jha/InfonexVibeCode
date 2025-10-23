@@ -1,4 +1,4 @@
-// Official Google Gemini API integration for Gemini 2.5 Pro model
+// Official Google Gemini API integration for Gemini 2.5 Flash Preview model
 import { GoogleGenAI } from "@google/genai";
 
 interface Message {
@@ -34,7 +34,7 @@ export async function chatWithAI(
     }));
 
   const response = await ai.models.generateContent({
-    model: "gemini-2.5-pro",
+    model: "gemini-2.5-flash-preview-09-2025",
     config: systemPrompt ? { systemInstruction: systemPrompt } : undefined,
     contents,
   });
@@ -65,7 +65,7 @@ export async function* chatWithAIStream(
     }));
 
   const stream = await ai.models.generateContentStream({
-    model: "gemini-2.5-pro",
+    model: "gemini-2.5-flash-preview-09-2025",
     config: systemPrompt ? { systemInstruction: systemPrompt } : undefined,
     contents,
   });

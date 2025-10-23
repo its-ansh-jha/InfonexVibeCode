@@ -41,7 +41,8 @@ Vibe Code is an AI-powered app building platform that allows users to create app
 
 ### Database Schema
 - `users`: Firebase user sync (id, email, displayName, photoURL)
-- `projects`: User projects with S3 prefix and E2B sandbox info
+- `projects`: User projects with S3 prefix, E2B sandbox info, and workflow command
+  - `workflowCommand`: Auto-saved server start command (e.g., "npm run dev") that runs when sandbox is recreated
 - `files`: File metadata tracking (path, s3Key, size, mimeType)
 - `messages`: Chat history with tool call metadata
 
@@ -106,14 +107,31 @@ Vibe Code is an AI-powered app building platform that allows users to create app
 - **Interactions**: Subtle hover elevations, smooth transitions
 
 ## Recent Changes
-- **October 23, 2025** (Latest): Major mobile UX and UI enhancements
+- **October 23, 2025** (Latest Session): Critical fixes and workflow automation
+  - **Chat Scrolling Fixed**: Removed fixed positioning on input area that was preventing message scrolling
+  - **AI Streaming Improvements**:
+    - Server commands (npm run dev, python servers) now run in background without blocking AI stream
+    - AI responses complete immediately after starting long-running commands
+    - Tool summaries show "Created index.html" and "Started: npm run dev" format (concise, no full code)
+  - **Automatic Workflow System**:
+    - Added `workflowCommand` field to projects schema
+    - When AI starts a server (npm run dev, python app.py, etc.), command is auto-saved to project
+    - When sandbox expires and is recreated:
+      1. All files sync from S3 to new sandbox
+      2. Saved workflow command runs automatically in background
+      3. Website/app comes back online immediately without user intervention
+  - **System Prompt Enhancements**:
+    - AI now creates all websites and apps in ENGLISH language by default
+    - Clearer guidance on server command behavior and tool execution
+    - Better explanations for background command execution
+
+- **October 23, 2025** (Earlier): Major mobile UX and UI enhancements
   - **Chat Page Improvements**:
     - Added intelligent code block parsing with syntax detection
     - Implemented copy-to-clipboard functionality for code snippets
     - Enhanced mobile responsiveness with proper spacing for all screen sizes (xs, sm, md, lg)
     - Improved touch targets for better mobile interaction
     - Added gradient avatars and smooth animations
-    - Fixed input area at bottom on mobile devices for better UX
     - Auto-resizing textarea for message composition
   - **Files Page Improvements**:
     - Added real-time file search/filter functionality

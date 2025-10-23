@@ -5,7 +5,7 @@ import { cn } from "@/lib/utils";
 const mobileNavItems = [
   { title: "Projects", url: "/projects", icon: FolderOpen },
   { title: "Chat", url: "/chat", icon: MessageSquare },
-  { title: "Repository", url: "/repository", icon: FolderGit2 },
+  { title: "Files", url: "/files", icon: FolderGit2 },
   { title: "Preview", url: "/preview", icon: Play },
 ];
 

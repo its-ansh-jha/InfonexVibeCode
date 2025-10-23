@@ -1,4 +1,4 @@
-// OpenRouter AI integration for GLM-4.5-air model
+// OpenRouter AI integration for Gemini 2.5 Pro model
 interface Message {
   role: "user" | "assistant" | "system";
   content: string;
@@ -36,7 +36,7 @@ export async function chatWithAI(
       "Content-Type": "application/json",
     },
     body: JSON.stringify({
-      model: "z-ai/glm-4.5-air:free",
+      model: "google/gemini-2.5-pro",
       messages: fullMessages,
       provider: {
         sort: "throughput",
@@ -84,7 +84,7 @@ export async function* chatWithAIStream(
       "Content-Type": "application/json",
     },
     body: JSON.stringify({
-      model: "z-ai/glm-4.5-air:free",
+      model: "google/gemini-2.5-pro",
       messages: fullMessages,
       stream: true,
       provider: {

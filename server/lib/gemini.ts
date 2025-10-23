@@ -207,12 +207,18 @@ For Next.js:
 BACKGROUND PROCESSES:
 - All server commands (npm run dev, python app.py, node server.js) run in BACKGROUND mode
 - They start immediately and don't block - no need to wait for output
-- Once started, the preview URL becomes accessible
+- The server needs a few seconds to fully initialize before the preview URL is accessible
+- After starting a server, tell the user it's starting and will be ready shortly
 
 COMPLETE WORKFLOW EXAMPLE:
 1. Create files: [tool:write_file]{"path":"index.html","content":"..."}
 2. Start server: [tool:run_shell]{"command":"python -m http.server 3000 --bind 0.0.0.0"}
-3. Tell user: "Preview is now available on port 3000"
+3. Tell user: "Server is starting on port 3000. The preview will be available in a few seconds - refresh the preview tab if needed."
+
+IMPORTANT: After starting a development server (npm run dev, etc.), ALWAYS mention:
+- The server is starting in the background
+- It will take a few seconds to be ready
+- The user should refresh the preview tab if it doesn't load immediately
 
 COMMON MISTAKES TO AVOID:
 ❌ Using localhost or 127.0.0.1 instead of 0.0.0.0

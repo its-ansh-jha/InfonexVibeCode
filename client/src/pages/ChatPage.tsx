@@ -67,7 +67,16 @@ function CodeBlock({ code, language = "javascript" }: { code: string; language?:
 }
 
 function MessageContent({ content }: { content: string }) {
-  // Parse code blocks from content
+  // Remove tool call JSON markup patterns: [tool:name]{...}
+  let cleanedContent = content.replace(/\[tool:\w+\]\{[\s\S]*?\}(?=\s|$|\[tool:)/g, '');
+  
+  // Remove action markup patterns: [action:description]
+  cleanedContent = cleanedContent.replace(/\[action:.*?\]/g, '');
+  
+  // Clean up extra whitespace
+  cleanedContent = cleanedContent.replace(/\n{3,}/g, '\n\n').trim();
+  
+  // Parse code blocks from cleaned content
   const parts: Array<{ type: 'text' | 'code'; content: string; language?: string }> = [];
   
   // Match code blocks with ```language\ncode\n``` or ```\ncode\n``` format
@@ -75,10 +84,10 @@ function MessageContent({ content }: { content: string }) {
   let lastIndex = 0;
   let match;
 
-  while ((match = codeBlockRegex.exec(content)) !== null) {
+  while ((match = codeBlockRegex.exec(cleanedContent)) !== null) {
     // Add text before code block
     if (match.index > lastIndex) {
-      const textContent = content.slice(lastIndex, match.index).trim();
+      const textContent = cleanedContent.slice(lastIndex, match.index).trim();
       if (textContent) {
         parts.push({
           type: 'text',
@@ -101,8 +110,8 @@ function MessageContent({ content }: { content: string }) {
   }
   
   // Add remaining text
-  if (lastIndex < content.length) {
-    const remainingContent = content.slice(lastIndex).trim();
+  if (lastIndex < cleanedContent.length) {
+    const remainingContent = cleanedContent.slice(lastIndex).trim();
     if (remainingContent) {
       parts.push({
         type: 'text',
@@ -111,9 +120,10 @@ function MessageContent({ content }: { content: string }) {
     }
   }
 
-  // If no code blocks found, return plain text
+  // If no parts found, return empty or show nothing
   if (parts.length === 0) {
-    return <p className="whitespace-pre-wrap break-words overflow-wrap-anywhere leading-relaxed text-sm sm:text-base">{content}</p>;
+    if (!cleanedContent) return null;
+    return <p className="whitespace-pre-wrap break-words overflow-wrap-anywhere leading-relaxed text-sm sm:text-base">{cleanedContent}</p>;
   }
 
   return (

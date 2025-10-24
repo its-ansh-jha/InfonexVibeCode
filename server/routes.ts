@@ -378,6 +378,92 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.post("/api/sandbox/:projectId/run-workflow", requireAuth, async (req: Request, res) => {
+    try {
+      if (!(await checkProjectOwnership(req.params.projectId, req.userId!))) {
+        return res.status(403).json({ error: "Forbidden: Access denied" });
+      }
+
+      const project = await storage.getProject(req.params.projectId);
+      
+      if (!project?.workflowCommand) {
+        return res.status(400).json({ error: "No workflow command configured" });
+      }
+
+      // Run the workflow command in the background
+      executeShellCommand(req.params.projectId, project.workflowCommand).catch(err => 
+        console.error('Background workflow command error:', err)
+      );
+
+      res.json({ 
+        success: true,
+        command: project.workflowCommand
+      });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Image Upload
+  app.post("/api/upload/image", requireAuth, async (req: any, res) => {
+    try {
+      const multer = (await import("multer")).default;
+      
+      // Configure multer with file size limit (5MB) and file filter
+      const upload = multer({ 
+        storage: multer.memoryStorage(),
+        limits: {
+          fileSize: 5 * 1024 * 1024 // 5MB limit
+        },
+        fileFilter: (req: any, file: any, cb: any) => {
+          // Only allow image files
+          const allowedMimeTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/svg+xml'];
+          if (allowedMimeTypes.includes(file.mimetype)) {
+            cb(null, true);
+          } else {
+            cb(new Error('Invalid file type. Only images (JPEG, PNG, GIF, WebP, SVG) are allowed.'));
+          }
+        }
+      });
+      
+      upload.single('file')(req, res, async (err: any) => {
+        if (err) {
+          if (err.code === 'LIMIT_FILE_SIZE') {
+            return res.status(400).json({ error: 'File size exceeds 5MB limit' });
+          }
+          return res.status(400).json({ error: err.message });
+        }
+        
+        const file = req.file;
+        const projectId = req.body.projectId;
+        
+        if (!file) {
+          return res.status(400).json({ error: "No file uploaded" });
+        }
+        
+        if (!(await checkProjectOwnership(projectId, req.userId!))) {
+          return res.status(403).json({ error: "Forbidden: Access denied" });
+        }
+        
+        // Generate unique filename with safe extension
+        const timestamp = Date.now();
+        const sanitizedOriginalName = file.originalname.replace(/[^a-zA-Z0-9.-]/g, '_');
+        const filename = `${timestamp}-${sanitizedOriginalName}`;
+        const path = `attachments/${filename}`;
+        
+        // Upload to S3
+        const s3Key = await uploadFileToS3(projectId, path, file.buffer.toString('base64'));
+        
+        // Get public URL (you may need to adjust based on your S3 configuration)
+        const url = `https://s3.amazonaws.com/${process.env.S3_BUCKET_NAME}/${s3Key}`;
+        
+        res.json({ url, path, s3Key });
+      });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
   // Messages - Chat with AI
   app.get("/api/messages/:projectId", requireAuth, async (req: Request, res) => {
     try {
@@ -394,7 +480,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/messages/stream", requireAuth, async (req: Request, res) => {
     try {
-      const { projectId, content } = req.body;
+      const { projectId, content, attachments } = req.body;
 
       if (!(await checkProjectOwnership(projectId, req.userId!))) {
         return res.status(403).json({ error: "Forbidden: Access denied" });
@@ -421,11 +507,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       }, 15000);
 
-      // Save user message
+      // Save user message with attachments
       const userMessage = await storage.createMessage({
         projectId,
         role: "user",
         content,
+        attachments: attachments || null,
       });
 
       // Get sandbox status and preview state
@@ -654,6 +741,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
                 const result = await webSearch(query);
                 const summary = `Searched: ${query}`;
                 toolCalls.push({ name: toolName, arguments: args, summary, result });
+                if (clientConnected) {
+                  res.write(`data: ${JSON.stringify({ type: 'tool', name: toolName, summary })}\n\n`);
+                }
+              } else if (toolName === 'configure_workflow') {
+                const { command } = args;
+                
+                // Save workflow command for auto-restart
+                await storage.updateProject(projectId, {
+                  workflowCommand: command
+                });
+
+                const summary = `Configured workflow: ${command}`;
+                toolCalls.push({ name: toolName, arguments: args, summary, result: { 
+                  command,
+                  message: 'Workflow command saved. Will auto-run on sandbox restart and available via manual run button.'
+                }});
                 if (clientConnected) {
                   res.write(`data: ${JSON.stringify({ type: 'tool', name: toolName, summary })}\n\n`);
                 }

@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useParams } from "wouter";
-import { Send, Bot, User as UserIcon, Loader2, Wrench, FileCode, Terminal, Play, Copy, Check, Sparkles } from "lucide-react";
+import { Send, Bot, User as UserIcon, Loader2, Wrench, FileCode, Terminal, Play, Copy, Check, Sparkles, Image as ImageIcon, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Card } from "@/components/ui/card";
@@ -244,8 +244,10 @@ export default function ChatPage() {
   const [streamingMessage, setStreamingMessage] = useState("");
   const [streamingTools, setStreamingTools] = useState<ToolCall[]>([]);
   const [streamingActions, setStreamingActions] = useState<Action[]>([]);
+  const [selectedImages, setSelectedImages] = useState<File[]>([]);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const { data: messages, isLoading } = useQuery<Message[]>({
     queryKey: ["/api/messages", projectId],
@@ -279,10 +281,12 @@ export default function ChatPage() {
   }, [input]);
 
   const handleSend = async () => {
-    if (!input.trim() || isStreaming) return;
+    if ((!input.trim() && selectedImages.length === 0) || isStreaming) return;
     
     const userMessage = input;
+    const imagesToUpload = selectedImages;
     setInput("");
+    setSelectedImages([]);
     setIsStreaming(true);
     setStreamingMessage("");
     setStreamingTools([]);
@@ -302,6 +306,29 @@ export default function ChatPage() {
       // Get Firebase ID token for authentication
       const idToken = await auth.currentUser?.getIdToken();
       
+      // Upload images if any
+      let attachments: string[] = [];
+      if (imagesToUpload.length > 0) {
+        for (const image of imagesToUpload) {
+          const formData = new FormData();
+          formData.append('file', image);
+          formData.append('projectId', projectId!);
+          
+          const uploadResponse = await fetch("/api/upload/image", {
+            method: "POST",
+            headers: {
+              "Authorization": `Bearer ${idToken}`,
+            },
+            body: formData,
+          });
+          
+          if (uploadResponse.ok) {
+            const { url } = await uploadResponse.json();
+            attachments.push(url);
+          }
+        }
+      }
+      
       const response = await fetch("/api/messages/stream", {
         method: "POST",
         headers: {
@@ -310,7 +337,8 @@ export default function ChatPage() {
         },
         body: JSON.stringify({
           projectId,
-          content: userMessage,
+          content: userMessage || "(Image uploaded)",
+          attachments: attachments.length > 0 ? attachments : undefined,
         }),
       });
 
@@ -412,6 +440,19 @@ export default function ChatPage() {
     }
   };
 
+  const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files || []);
+    const imageFiles = files.filter(file => file.type.startsWith('image/'));
+    setSelectedImages(prev => [...prev, ...imageFiles].slice(0, 5)); // Limit to 5 images
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
+  };
+
+  const removeImage = (index: number) => {
+    setSelectedImages(prev => prev.filter((_, i) => i !== index));
+  };
+
   const getToolIcon = (toolName: string) => {
     if (toolName === 'write_file' || toolName === 'edit_file') return <FileCode className="h-3 w-3" />;
     if (toolName === 'run_shell') return <Terminal className="h-3 w-3" />;
@@ -471,6 +512,7 @@ export default function ChatPage() {
               const isUser = message.role === "user";
               const toolCalls = message.toolCalls as ToolCall[] | null;
               const actions = message.actions as Action[] | null;
+              const attachments = message.attachments as string[] | null;
 
               return (
                 <div
@@ -496,7 +538,19 @@ export default function ChatPage() {
                       "p-3 sm:p-4 overflow-hidden max-w-full shadow-sm hover:shadow-md transition-shadow",
                       isUser ? "bg-primary text-primary-foreground" : "bg-card"
                     )}>
-                      <div className="max-w-full overflow-hidden">
+                      <div className="max-w-full overflow-hidden space-y-2">
+                        {attachments && attachments.length > 0 && (
+                          <div className="flex flex-wrap gap-2">
+                            {attachments.map((url, idx) => (
+                              <img
+                                key={idx}
+                                src={url}
+                                alt={`Attachment ${idx + 1}`}
+                                className="max-w-xs rounded border border-border"
+                              />
+                            ))}
+                          </div>
+                        )}
                         <MessageContent content={message.content} />
                       </div>
                     </Card>
@@ -575,30 +629,74 @@ export default function ChatPage() {
 
       {/* Input Area */}
       <div className="border-t border-border bg-card p-3 sm:p-4 md:p-6 pb-20 md:pb-6">
-        <div className="max-w-4xl mx-auto flex gap-2 sm:gap-3">
-          <Textarea
-            ref={textareaRef}
-            placeholder="Describe what you want to build..."
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            onKeyDown={handleKeyPress}
-            rows={1}
-            className="min-h-[44px] max-h-32 resize-none text-sm sm:text-base"
-            data-testid="input-chat-message"
-          />
-          <Button
-            onClick={handleSend}
-            disabled={!input.trim() || isStreaming}
-            size="icon"
-            className="h-11 w-11 shrink-0 shadow-md hover:shadow-lg transition-shadow"
-            data-testid="button-send-message"
-          >
-            {isStreaming ? (
-              <Loader2 className="h-5 w-5 animate-spin" />
-            ) : (
-              <Send className="h-5 w-5" />
-            )}
-          </Button>
+        <div className="max-w-4xl mx-auto space-y-2">
+          {/* Selected images preview */}
+          {selectedImages.length > 0 && (
+            <div className="flex flex-wrap gap-2">
+              {selectedImages.map((image, index) => (
+                <div key={index} className="relative group">
+                  <img
+                    src={URL.createObjectURL(image)}
+                    alt={`Upload ${index + 1}`}
+                    className="h-16 w-16 object-cover rounded border border-border"
+                  />
+                  <Button
+                    variant="destructive"
+                    size="icon"
+                    className="absolute -top-2 -right-2 h-5 w-5 rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
+                    onClick={() => removeImage(index)}
+                  >
+                    <X className="h-3 w-3" />
+                  </Button>
+                </div>
+              ))}
+            </div>
+          )}
+          
+          <div className="flex gap-2 sm:gap-3">
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/*"
+              multiple
+              onChange={handleImageSelect}
+              className="hidden"
+            />
+            <Button
+              variant="outline"
+              size="icon"
+              onClick={() => fileInputRef.current?.click()}
+              disabled={isStreaming}
+              className="h-11 w-11 shrink-0"
+              title="Upload images"
+              data-testid="button-upload-image"
+            >
+              <ImageIcon className="h-5 w-5" />
+            </Button>
+            <Textarea
+              ref={textareaRef}
+              placeholder="Describe what you want to build..."
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              onKeyDown={handleKeyPress}
+              rows={1}
+              className="min-h-[44px] max-h-32 resize-none text-sm sm:text-base"
+              data-testid="input-chat-message"
+            />
+            <Button
+              onClick={handleSend}
+              disabled={(!input.trim() && selectedImages.length === 0) || isStreaming}
+              size="icon"
+              className="h-11 w-11 shrink-0 shadow-md hover:shadow-lg transition-shadow"
+              data-testid="button-send-message"
+            >
+              {isStreaming ? (
+                <Loader2 className="h-5 w-5 animate-spin" />
+              ) : (
+                <Send className="h-5 w-5" />
+              )}
+            </Button>
+          </div>
         </div>
       </div>
     </div>

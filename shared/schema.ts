@@ -47,6 +47,7 @@ export const messages = pgTable("messages", {
   content: text("content").notNull(),
   toolCalls: jsonb("tool_calls"), // AI tool calls metadata
   actions: jsonb("actions"), // Real-time action steps the AI performs
+  attachments: jsonb("attachments"), // Image/file attachments (URLs to S3)
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 

@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { useParams } from "wouter";
-import { Copy, Download, ExternalLink, Loader2, RefreshCw, AlertCircle, Maximize2, Minimize2 } from "lucide-react";
+import { Copy, Download, ExternalLink, Loader2, RefreshCw, AlertCircle, Maximize2, Minimize2, Play } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
@@ -17,6 +17,7 @@ export default function PreviewPage() {
   const [isRecreating, setIsRecreating] = useState(false);
   const [sandboxExpired, setSandboxExpired] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
+  const [isRunningCommand, setIsRunningCommand] = useState(false);
 
   const { data: project, isLoading: projectLoading, refetch: refetchProject } = useQuery<Project>({
     queryKey: ["/api/projects", projectId],
@@ -163,6 +164,45 @@ export default function PreviewPage() {
     }
   };
 
+  const handleRunCommand = async () => {
+    if (!project?.workflowCommand) {
+      toast({
+        title: "No command configured",
+        description: "The AI hasn't configured a run command yet",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsRunningCommand(true);
+    try {
+      const idToken = await auth.currentUser?.getIdToken();
+      const response = await fetch(`/api/sandbox/${projectId}/run-workflow`, {
+        method: "POST",
+        headers: {
+          "Authorization": `Bearer ${idToken}`,
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to run command");
+      }
+
+      toast({
+        title: "Command started",
+        description: project.workflowCommand,
+      });
+    } catch (error: any) {
+      toast({
+        title: "Failed to run command",
+        description: error.message,
+        variant: "destructive",
+      });
+    } finally {
+      setIsRunningCommand(false);
+    }
+  };
+
   if (!hasSandbox) {
     return (
       <div className="flex items-center justify-center h-full">
@@ -219,6 +259,24 @@ export default function PreviewPage() {
                       <Loader2 className="h-3 w-3 animate-spin" />
                     ) : (
                       <AlertCircle className="h-3 w-3" />
+                    )}
+                  </Button>
+                )}
+
+                {project?.workflowCommand && !sandboxExpired && (
+                  <Button
+                    variant="default"
+                    size="sm"
+                    onClick={handleRunCommand}
+                    disabled={isRunningCommand}
+                    className="h-7 w-7 p-0"
+                    title={`Run: ${project.workflowCommand}`}
+                    data-testid="button-run-workflow"
+                  >
+                    {isRunningCommand ? (
+                      <Loader2 className="h-3 w-3 animate-spin" />
+                    ) : (
+                      <Play className="h-3 w-3" />
                     )}
                   </Button>
                 )}

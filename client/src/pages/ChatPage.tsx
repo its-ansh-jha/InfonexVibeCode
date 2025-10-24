@@ -67,14 +67,22 @@ function CodeBlock({ code, language = "javascript" }: { code: string; language?:
 }
 
 function MessageContent({ content }: { content: string }) {
-  // Remove tool call JSON markup patterns: [tool:name]{...}
-  let cleanedContent = content.replace(/\[tool:\w+\]\{[\s\S]*?\}(?=\s|$|\[tool:)/g, '');
+  // Remove tool call JSON markup patterns: [tool:name]{...} (with nested braces)
+  let cleanedContent = content.replace(/\[tool:\w+\]\{(?:[^{}]|\{[^{}]*\})*\}/g, '');
   
   // Remove action markup patterns: [action:description]
-  cleanedContent = cleanedContent.replace(/\[action:.*?\]/g, '');
+  cleanedContent = cleanedContent.replace(/\[action:[^\]]*\]/g, '');
   
-  // Clean up extra whitespace
+  // Remove any remaining standalone JSON objects that might be tool results
+  cleanedContent = cleanedContent.replace(/^\s*\{[\s\S]*?"(?:content|code|command)":\s*"[\s\S]*?"\}\s*$/gm, '');
+  
+  // Clean up extra whitespace and newlines
   cleanedContent = cleanedContent.replace(/\n{3,}/g, '\n\n').trim();
+  
+  // If the content is just JSON/code artifacts, return nothing
+  if (!cleanedContent || /^\s*[\{\}\[\]",:]*\s*$/.test(cleanedContent)) {
+    return null;
+  }
   
   // Parse code blocks from cleaned content
   const parts: Array<{ type: 'text' | 'code'; content: string; language?: string }> = [];

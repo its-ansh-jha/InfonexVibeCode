@@ -459,9 +459,10 @@ export default function ChatPage() {
     setSelectedImages(prev => prev.filter((_, i) => i !== index));
   };
 
-  const handleImageButtonClick = () => {
+  const handleImageButtonClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
     if (selectedImages.length >= 5) return;
-    setShowImageOptions(true);
+    setShowImageOptions(!showImageOptions);
   };
 
   const handleCameraCapture = () => {
@@ -684,7 +685,7 @@ export default function ChatPage() {
                   ))}
                   {selectedImages.length < 5 && (
                     <button
-                      onClick={handleImageButtonClick}
+                      onClick={(e) => handleImageButtonClick(e)}
                       disabled={isStreaming}
                       className="h-20 w-20 rounded-lg border-2 border-dashed border-muted-foreground/30 hover:border-muted-foreground/50 bg-muted/50 hover:bg-muted transition-colors flex items-center justify-center group disabled:opacity-50 disabled:cursor-not-allowed"
                       title="Add more images"
@@ -717,7 +718,7 @@ export default function ChatPage() {
                 <Button
                   variant="ghost"
                   size="icon"
-                  onClick={handleImageButtonClick}
+                  onClick={(e) => handleImageButtonClick(e)}
                   disabled={isStreaming || selectedImages.length >= 5}
                   className="h-10 w-10 shrink-0 hover:bg-muted"
                   title={selectedImages.length >= 5 ? "Maximum 5 images allowed" : "Upload images (max 5)"}

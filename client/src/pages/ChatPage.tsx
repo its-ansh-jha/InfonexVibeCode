@@ -67,9 +67,11 @@ function CodeBlock({ code, language = "javascript" }: { code: string; language?:
 }
 
 function MessageContent({ content }: { content: string }) {
-  // Remove tool call JSON markup patterns - more aggressive approach
-  // Match [tool:name]{...} where {...} can contain nested objects and escaped quotes
+  // Remove tool call patterns with JSON: [tool:name]{...}
   let cleanedContent = content.replace(/\[tool:\w+\]\{[^]*?\}(?=\s*(?:\[tool:|\[action:|$))/g, '');
+  
+  // Remove tool call patterns without JSON: [tool:name]
+  cleanedContent = cleanedContent.replace(/\[tool:\w+\](?!\{)/g, '');
   
   // Remove action markup patterns: [action:description]
   cleanedContent = cleanedContent.replace(/\[action:[^\]]*\]/g, '');

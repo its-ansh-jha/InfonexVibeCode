@@ -9,6 +9,7 @@ Vibe Code is an AI-powered app building platform that allows users to create app
 - **Advanced AI Chat Agent**: 
   - Powered by Google's Gemini 2.5 Flash Preview model
   - Streaming responses with live tool execution feedback
+  - Real-time action tracking with visual progress indicators
 - **AWS S3 Storage**: Secure file storage for all project files
 - **E2B Sandbox Integration**: Real-time code execution and preview in isolated sandboxes
 - **Advanced AI Tools**:
@@ -49,7 +50,7 @@ Vibe Code is an AI-powered app building platform that allows users to create app
 - `projects`: User projects with S3 prefix, E2B sandbox info, and workflow command
   - `workflowCommand`: Auto-saved server start command (e.g., "npm run dev") that runs when sandbox is recreated
 - `files`: File metadata tracking (path, s3Key, size, mimeType)
-- `messages`: Chat history with tool call metadata
+- `messages`: Chat history with tool call metadata and real-time action tracking
 
 ## API Endpoints
 
@@ -112,7 +113,16 @@ Vibe Code is an AI-powered app building platform that allows users to create app
 - **Interactions**: Subtle hover elevations, smooth transitions
 
 ## Recent Changes
-- **October 23, 2025** (Latest Session): Advanced AI Platform Enhancements
+- **October 24, 2025** (Latest Session): Real-Time Action Tracking System
+  - **Live Progress Indicators**: AI now shows real-time progress indicators as it works
+  - **Action Streaming**: Actions like "Installing dependencies", "Configured Start application", etc. display in real-time
+  - **Visual Feedback**: Each action shows with contextual icons (package, file, terminal, settings, etc.)
+  - **Status Updates**: Actions transition from "in_progress" (spinner) to "completed" (check mark) automatically
+  - **Database Integration**: All actions are stored in messages table for historical replay
+  - **UI Components**: New ActionSteps component displays actions above chat messages
+  - **System Prompt Updates**: AI instructed to emit [action:description] patterns before performing tasks
+
+- **October 23, 2025**: Advanced AI Platform Enhancements
   - **Enhanced File Management**:
     - `delete_file` tool now removes files from all three locations: S3, E2B sandbox, and database
     - Accurate status reporting with detailed error messages for each deletion step

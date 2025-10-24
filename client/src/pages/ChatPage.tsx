@@ -73,8 +73,55 @@ function MessageContent({ content }: { content: string }) {
   // Remove standalone tool call patterns without JSON: [tool:name] (including partial ones)
   cleanedContent = cleanedContent.replace(/\[tool:[^\]]*\]/g, '');
   
-  // Remove any remaining JSON-like structures that start with { and contain "content", "path", "code", etc.
-  cleanedContent = cleanedContent.replace(/\{[\s\S]*?"(?:content|path|code|command|name)"[\s\S]*?\}/g, '');
+  // Remove JSON objects with proper brace matching (handles nested structures)
+  let depth = 0;
+  let inString = false;
+  let escape = false;
+  let result = '';
+  let jsonStart = -1;
+  
+  for (let i = 0; i < cleanedContent.length; i++) {
+    const char = cleanedContent[i];
+    const prevChar = i > 0 ? cleanedContent[i - 1] : '';
+    
+    // Handle string escaping
+    if (char === '"' && !escape) {
+      inString = !inString;
+    }
+    escape = char === '\\' && !escape;
+    
+    if (!inString) {
+      if (char === '{') {
+        if (depth === 0) jsonStart = i;
+        depth++;
+      } else if (char === '}') {
+        depth--;
+        if (depth === 0 && jsonStart !== -1) {
+          // Check if this looks like a JSON object with common tool properties
+          const jsonCandidate = cleanedContent.substring(jsonStart, i + 1);
+          if (/(?:content|path|code|command|name|language|query|arguments)/.test(jsonCandidate)) {
+            // Skip this JSON block
+            jsonStart = -1;
+            continue;
+          }
+          jsonStart = -1;
+        }
+      }
+    }
+    
+    // Only add character if we're not inside a JSON block
+    if (depth === 0 && jsonStart === -1) {
+      result += char;
+    }
+  }
+  
+  cleanedContent = result;
+  
+  // Remove any remaining partial JSON patterns
+  cleanedContent = cleanedContent.replace(/\{[\s\S]*?(?:content|path|code|command|name|language|query)[\s\S]*?\}/g, '');
+  
+  // Remove standalone curly braces and brackets
+  cleanedContent = cleanedContent.replace(/^\s*[\{\}\[\]]+\s*$/gm, '');
   
   // Clean up extra whitespace and newlines
   cleanedContent = cleanedContent.replace(/\n{3,}/g, '\n\n').trim();

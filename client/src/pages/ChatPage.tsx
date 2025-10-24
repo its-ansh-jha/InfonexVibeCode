@@ -697,7 +697,7 @@ export default function ChatPage() {
               </Button>
               <Textarea
                 ref={textareaRef}
-                placeholder="Describe what you want to build..."
+                placeholder="Ask anything to build..."
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
                 onKeyDown={handleKeyPress}

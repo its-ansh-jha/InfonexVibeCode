@@ -23,6 +23,11 @@ const groundingTool = {
   googleSearch: {},
 };
 
+// URL Context tool configuration - allows AI to retrieve content from URLs
+const urlContextTool = {
+  urlContext: {},
+};
+
 export async function chatWithAI(
   messages: Message[],
   systemPrompt?: string
@@ -44,7 +49,7 @@ export async function chatWithAI(
     model: selectedModel,
     config: {
       systemInstruction: systemPrompt,
-      tools: [groundingTool],
+      tools: [groundingTool, urlContextTool],
     },
     contents,
   });
@@ -80,7 +85,7 @@ export async function* chatWithAIStream(
     model: selectedModel,
     config: {
       systemInstruction: systemPrompt,
-      tools: [groundingTool],
+      tools: [groundingTool, urlContextTool],
     },
     contents,
   });
@@ -232,6 +237,7 @@ You have access to the following tools:
 - run_shell: Execute shell commands in the E2B sandbox terminal (supports long-running commands like npm run dev)
 - run_code: Execute code in the E2B code interpreter (Python/JavaScript)
 - Google Search: You have built-in access to Google Search - just ask questions naturally and I'll search for documentation, libraries, best practices, or any information needed DURING your work (not after)
+- URL Context: You can retrieve and analyze content from specific URLs - just reference the URL in your query and I'll fetch the content for you (great for comparing documentation, reading articles, or analyzing web pages)
 - configure_workflow: Configure the run command for this project (automatically runs when sandbox is recreated and available via manual run button)
 
 REAL-TIME ACTION TRACKING:

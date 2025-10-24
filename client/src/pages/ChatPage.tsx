@@ -128,22 +128,28 @@ function MessageContent({ content }: { content: string }) {
       continue;
     }
     
-    // Check for action list patterns (Created/Ran/Started/etc.)
-    const actionListMatch = line.match(/^(Created|Ran shell:|Started:|Edited|Installed|Configured)\s+(.+)$/);
+    // Check for action list patterns (Created/Ran/Started/Creating/Installing/etc.)
+    const actionListMatch = line.match(/^(Creating|Installing|Starting|Created|Ran shell:|Started:|Edited|Installed|Configured)\s+(.+)$/);
     if (actionListMatch) {
       const actionsList: Action[] = [];
       
       // Collect consecutive action lines
       while (i < lines.length) {
         const currentLine = lines[i];
-        const match = currentLine.match(/^(Created|Ran shell:|Started:|Edited|Installed|Configured)\s+(.+)$/);
+        const match = currentLine.match(/^(Creating|Installing|Starting|Created|Ran shell:|Started:|Edited|Installed|Configured)\s+(.+)$/);
         
         if (match) {
           const prefix = match[1];
           const detail = match[2].trim();
           
           let description = '';
-          if (prefix === 'Ran shell:') {
+          let status: 'completed' | 'in_progress' = 'completed';
+          
+          // "Creating", "Installing", "Starting" are in-progress actions
+          if (prefix === 'Creating' || prefix === 'Installing' || prefix === 'Starting') {
+            status = 'in_progress';
+            description = `${prefix} ${detail}`;
+          } else if (prefix === 'Ran shell:') {
             description = `Ran shell command ${detail}`;
           } else if (prefix === 'Started:') {
             description = `Started ${detail}`;
@@ -153,7 +159,7 @@ function MessageContent({ content }: { content: string }) {
           
           actionsList.push({
             description,
-            status: 'completed'
+            status
           });
           i++;
         } else {

@@ -67,14 +67,15 @@ function CodeBlock({ code, language = "javascript" }: { code: string; language?:
 }
 
 function MessageContent({ content }: { content: string }) {
-  // Remove tool call JSON markup patterns: [tool:name]{...} (with nested braces)
-  let cleanedContent = content.replace(/\[tool:\w+\]\{(?:[^{}]|\{[^{}]*\})*\}/g, '');
+  // Remove tool call JSON markup patterns - more aggressive approach
+  // Match [tool:name]{...} where {...} can contain nested objects and escaped quotes
+  let cleanedContent = content.replace(/\[tool:\w+\]\{[^]*?\}(?=\s*(?:\[tool:|\[action:|$))/g, '');
   
   // Remove action markup patterns: [action:description]
   cleanedContent = cleanedContent.replace(/\[action:[^\]]*\]/g, '');
   
-  // Remove any remaining standalone JSON objects that might be tool results
-  cleanedContent = cleanedContent.replace(/^\s*\{[\s\S]*?"(?:content|code|command)":\s*"[\s\S]*?"\}\s*$/gm, '');
+  // Remove any remaining JSON-like structures that start with { and contain "content", "path", "code", etc.
+  cleanedContent = cleanedContent.replace(/\{[\s\S]*?"(?:content|path|code|command|name)"[\s\S]*?\}/g, '');
   
   // Clean up extra whitespace and newlines
   cleanedContent = cleanedContent.replace(/\n{3,}/g, '\n\n').trim();

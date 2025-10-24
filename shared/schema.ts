@@ -46,6 +46,7 @@ export const messages = pgTable("messages", {
   role: text("role").notNull(), // 'user' or 'assistant'
   content: text("content").notNull(),
   toolCalls: jsonb("tool_calls"), // AI tool calls metadata
+  actions: jsonb("actions"), // Real-time action steps the AI performs
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 

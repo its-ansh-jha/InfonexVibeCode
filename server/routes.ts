@@ -463,6 +463,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Stream AI response
       let fullResponse = "";
       const toolCalls: any[] = [];
+      const actions: any[] = [];
 
       try {
         // Use chatWithAIStream which is already compatible with streaming
@@ -472,6 +473,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
             // Only send to client if still connected
             if (clientConnected) {
               res.write(`data: ${JSON.stringify({ type: 'chunk', content: chunk.content })}\n\n`);
+            }
+          } else if (chunk.type === 'action') {
+            // Track actions and send to client in real-time
+            actions.push(chunk.data);
+            if (clientConnected) {
+              res.write(`data: ${JSON.stringify({ type: 'action', action: chunk.data })}\n\n`);
             }
           } else if (chunk.type === 'tool_call') {
             const { name: toolName, arguments: args } = chunk.data;
@@ -660,12 +667,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
           }
         }
 
-        // Save assistant message with tool calls (even if client disconnected)
+        // Mark all actions as completed after streaming finishes
+        const completedActions = actions.map(action => ({
+          ...action,
+          status: 'completed' as const
+        }));
+
+        // Send final action status updates to client
+        if (clientConnected && completedActions.length > 0) {
+          res.write(`data: ${JSON.stringify({ type: 'actions_completed', actions: completedActions })}\n\n`);
+        }
+
+        // Save assistant message with tool calls and completed actions (even if client disconnected)
         await storage.createMessage({
           projectId,
           role: "assistant",
           content: fullResponse,
           toolCalls: toolCalls.length > 0 ? toolCalls : null,
+          actions: completedActions.length > 0 ? completedActions : null,
         });
 
         clearInterval(keepaliveInterval);

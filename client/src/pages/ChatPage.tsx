@@ -13,12 +13,18 @@ import { auth } from "@/lib/firebase";
 import type { Message } from "@shared/schema";
 import { cn } from "@/lib/utils";
 import { formatDistanceToNow } from "date-fns";
+import { ActionSteps } from "@/components/ActionSteps";
 
 interface ToolCall {
   name: string;
   summary?: string;
   arguments?: any;
   result?: any;
+}
+
+interface Action {
+  description: string;
+  status?: 'pending' | 'in_progress' | 'completed' | 'error';
 }
 
 function CodeBlock({ code, language = "javascript" }: { code: string; language?: string }) {
@@ -131,6 +137,7 @@ export default function ChatPage() {
   const [isStreaming, setIsStreaming] = useState(false);
   const [streamingMessage, setStreamingMessage] = useState("");
   const [streamingTools, setStreamingTools] = useState<ToolCall[]>([]);
+  const [streamingActions, setStreamingActions] = useState<Action[]>([]);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
@@ -173,6 +180,7 @@ export default function ChatPage() {
     setIsStreaming(true);
     setStreamingMessage("");
     setStreamingTools([]);
+    setStreamingActions([]);
 
     // Track if page becomes hidden
     let wasHidden = false;
@@ -213,6 +221,7 @@ export default function ChatPage() {
 
       let fullMessage = "";
       const tools: ToolCall[] = [];
+      const actions: Action[] = [];
 
       while (true) {
         const { done, value } = await reader.read();
@@ -228,6 +237,14 @@ export default function ChatPage() {
             if (data.type === 'chunk') {
               fullMessage += data.content;
               setStreamingMessage(fullMessage);
+            } else if (data.type === 'action') {
+              const action: Action = data.action;
+              actions.push(action);
+              setStreamingActions([...actions]);
+            } else if (data.type === 'actions_completed') {
+              // Update all actions to completed status
+              const completedActions: Action[] = data.actions;
+              setStreamingActions(completedActions);
             } else if (data.type === 'tool') {
               const toolCall: ToolCall = {
                 name: data.name,
@@ -278,6 +295,7 @@ export default function ChatPage() {
       setIsStreaming(false);
       setStreamingMessage("");
       setStreamingTools([]);
+      setStreamingActions([]);
     }
   };
 
@@ -346,6 +364,7 @@ export default function ChatPage() {
             {messages?.map((message) => {
               const isUser = message.role === "user";
               const toolCalls = message.toolCalls as ToolCall[] | null;
+              const actions = message.actions as Action[] | null;
 
               return (
                 <div
@@ -367,6 +386,9 @@ export default function ChatPage() {
                     "flex-1 space-y-2 min-w-0 max-w-full",
                     isUser && "flex flex-col items-end"
                   )}>
+                    {actions && actions.length > 0 && !isUser && (
+                      <ActionSteps actions={actions} className="mb-2" />
+                    )}
                     <Card className={cn(
                       "p-3 sm:p-4 overflow-hidden max-w-full shadow-sm hover:shadow-md transition-shadow",
                       isUser ? "bg-primary text-primary-foreground" : "bg-card"
@@ -412,6 +434,9 @@ export default function ChatPage() {
                   <Bot className="h-4 w-4 sm:h-5 sm:w-5 text-primary" />
                 </div>
                 <div className="flex-1 space-y-2 min-w-0 max-w-full">
+                  {streamingActions.length > 0 && (
+                    <ActionSteps actions={streamingActions} className="mb-2 animate-in fade-in slide-in-from-top-2 duration-200" />
+                  )}
                   <Card className="p-3 sm:p-4 bg-card overflow-hidden max-w-full shadow-sm">
                     <div className="max-w-full overflow-hidden">
                       {streamingMessage ? (

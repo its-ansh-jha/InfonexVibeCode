@@ -50,11 +50,11 @@ export async function chatWithAI(
   };
 }
 
-// Streaming version of chatWithAI that yields chunks and tool calls
+// Streaming version of chatWithAI that yields chunks, action events, and tool calls
 export async function* chatWithAIStream(
   messages: Message[],
   systemPrompt?: string
-): AsyncGenerator<{ type: 'text' | 'tool_call'; content?: string; data?: any }, void, unknown> {
+): AsyncGenerator<{ type: 'text' | 'action' | 'tool_call'; content?: string; data?: any }, void, unknown> {
   if (!process.env.GEMINI_API_KEY) {
     throw new Error("GEMINI_API_KEY is not set");
   }
@@ -75,12 +75,31 @@ export async function* chatWithAIStream(
   });
 
   let fullContent = "";
+  let buffer = "";
 
   for await (const chunk of stream) {
     const content = chunk.text;
     if (content) {
       fullContent += content;
+      buffer += content;
+      
+      // Parse and emit action events in real-time
+      const actionMatches = parseActionsFromBuffer(buffer);
+      for (const action of actionMatches.actions) {
+        yield { type: 'action', data: action };
+      }
+      buffer = actionMatches.remaining;
+      
+      // Yield text content
       yield { type: 'text', content };
+    }
+  }
+
+  // Process any remaining buffer
+  if (buffer.trim()) {
+    const finalActions = parseActionsFromBuffer(buffer, true);
+    for (const action of finalActions.actions) {
+      yield { type: 'action', data: action };
     }
   }
 
@@ -89,6 +108,47 @@ export async function* chatWithAIStream(
   for (const toolCall of toolCalls) {
     yield { type: 'tool_call', data: toolCall };
   }
+}
+
+interface ActionMatch {
+  description: string;
+  status?: 'pending' | 'in_progress' | 'completed' | 'error';
+}
+
+function parseActionsFromBuffer(buffer: string, isFinal: boolean = false): { actions: ActionMatch[], remaining: string } {
+  const actions: ActionMatch[] = [];
+  let remaining = buffer;
+  
+  // Match action patterns like: [action:description]
+  const actionPattern = /\[action:(.*?)\]/g;
+  let match;
+  let lastIndex = 0;
+  
+  while ((match = actionPattern.exec(buffer)) !== null) {
+    const description = match[1].trim();
+    if (description) {
+      actions.push({ 
+        description,
+        status: 'in_progress'
+      });
+    }
+    lastIndex = match.index + match[0].length;
+  }
+  
+  // Keep the part after the last complete match in the buffer
+  if (!isFinal && lastIndex > 0) {
+    // Check if there's a partial match at the end
+    const partialMatch = buffer.slice(lastIndex).match(/\[action:/);
+    if (partialMatch) {
+      remaining = buffer.slice(lastIndex);
+    } else {
+      remaining = "";
+    }
+  } else if (isFinal) {
+    remaining = "";
+  }
+  
+  return { actions, remaining };
 }
 
 function parseToolCalls(content: string): ToolCall[] {
@@ -161,6 +221,15 @@ You have access to the following tools:
 - run_shell: Execute shell commands in the E2B sandbox terminal (supports long-running commands like npm run dev)
 - run_code: Execute code in the E2B code interpreter (Python/JavaScript)
 - serper_web_search: Search the web for documentation, libraries, best practices, or any information needed DURING your work (not after)
+
+REAL-TIME ACTION TRACKING:
+Before performing ANY action, announce it using this format: [action:description]
+- Example: [action:Installing dependencies]
+- Example: [action:Configured Start application to run npm run dev]
+- Example: [action:Opened package.json]
+- Example: [action:Installed dependencies]
+- Example: [action:Integrating with Full-stack JavaScript Website]
+These actions show the user what you're doing in real-time as you work.
 
 CRITICAL RULES:
 1. All files you create/edit/delete are automatically synced to S3 storage AND the E2B sandbox

@@ -70,8 +70,8 @@ function MessageContent({ content }: { content: string }) {
   // Remove tool call patterns with JSON: [tool:name]{...}
   let cleanedContent = content.replace(/\[tool:\w+\]\{[^]*?\}(?=\s*(?:\[tool:|\[action:|$))/g, '');
   
-  // Remove tool call patterns without JSON: [tool:name]
-  cleanedContent = cleanedContent.replace(/\[tool:\w+\](?!\{)/g, '');
+  // Remove standalone tool call patterns without JSON: [tool:name] (including partial ones)
+  cleanedContent = cleanedContent.replace(/\[tool:[^\]]*\]/g, '');
   
   // Remove action markup patterns: [action:description]
   cleanedContent = cleanedContent.replace(/\[action:[^\]]*\]/g, '');

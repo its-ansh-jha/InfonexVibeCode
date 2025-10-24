@@ -73,9 +73,6 @@ function MessageContent({ content }: { content: string }) {
   // Remove standalone tool call patterns without JSON: [tool:name] (including partial ones)
   cleanedContent = cleanedContent.replace(/\[tool:[^\]]*\]/g, '');
   
-  // Remove action markup patterns: [action:description]
-  cleanedContent = cleanedContent.replace(/\[action:[^\]]*\]/g, '');
-  
   // Remove any remaining JSON-like structures that start with { and contain "content", "path", "code", etc.
   cleanedContent = cleanedContent.replace(/\{[\s\S]*?"(?:content|path|code|command|name)"[\s\S]*?\}/g, '');
   
@@ -87,16 +84,16 @@ function MessageContent({ content }: { content: string }) {
     return null;
   }
   
-  // Parse code blocks from cleaned content
-  const parts: Array<{ type: 'text' | 'code'; content: string; language?: string }> = [];
+  // Parse content into parts: text, code blocks, and actions
+  const parts: Array<{ type: 'text' | 'code' | 'action'; content: string; language?: string }> = [];
   
-  // Match code blocks with ```language\ncode\n``` or ```\ncode\n``` format
-  const codeBlockRegex = /```(\w+)?\n?([\s\S]*?)```/g;
+  // Combined regex to match both code blocks and actions
+  const combinedRegex = /(?:```(\w+)?\n?([\s\S]*?)```)|(?:\[action:([^\]]+)\])/g;
   let lastIndex = 0;
   let match;
 
-  while ((match = codeBlockRegex.exec(cleanedContent)) !== null) {
-    // Add text before code block
+  while ((match = combinedRegex.exec(cleanedContent)) !== null) {
+    // Add text before this match
     if (match.index > lastIndex) {
       const textContent = cleanedContent.slice(lastIndex, match.index).trim();
       if (textContent) {
@@ -107,14 +104,23 @@ function MessageContent({ content }: { content: string }) {
       }
     }
     
-    // Add code block
-    const codeContent = match[2].trim();
-    if (codeContent) {
+    // Determine what was matched
+    if (match[3]) {
+      // Action pattern matched
       parts.push({
-        type: 'code',
-        content: codeContent,
-        language: match[1] || 'code'
+        type: 'action',
+        content: match[3].trim()
       });
+    } else if (match[2] !== undefined) {
+      // Code block matched
+      const codeContent = match[2].trim();
+      if (codeContent) {
+        parts.push({
+          type: 'code',
+          content: codeContent,
+          language: match[1] || 'code'
+        });
+      }
     }
     
     lastIndex = match.index + match[0].length;
@@ -131,7 +137,7 @@ function MessageContent({ content }: { content: string }) {
     }
   }
 
-  // If no parts found, return empty or show nothing
+  // If no parts found, return the cleaned content
   if (parts.length === 0) {
     if (!cleanedContent) return null;
     return <p className="whitespace-pre-wrap break-words overflow-wrap-anywhere leading-relaxed text-sm sm:text-base">{cleanedContent}</p>;
@@ -139,13 +145,19 @@ function MessageContent({ content }: { content: string }) {
 
   return (
     <div className="space-y-2 max-w-full overflow-hidden">
-      {parts.map((part, idx) => (
-        part.type === 'code' ? (
-          <CodeBlock key={idx} code={part.content} language={part.language} />
-        ) : (
-          <p key={idx} className="whitespace-pre-wrap break-words overflow-wrap-anywhere leading-relaxed text-sm sm:text-base">{part.content}</p>
-        )
-      ))}
+      {parts.map((part, idx) => {
+        if (part.type === 'code') {
+          return <CodeBlock key={idx} code={part.content} language={part.language} />;
+        } else if (part.type === 'action') {
+          return (
+            <div key={idx} className="my-1">
+              <ActionSteps actions={[{ description: part.content, status: 'completed' }]} />
+            </div>
+          );
+        } else {
+          return <p key={idx} className="whitespace-pre-wrap break-words overflow-wrap-anywhere leading-relaxed text-sm sm:text-base">{part.content}</p>;
+        }
+      })}
     </div>
   );
 }
@@ -407,9 +419,6 @@ export default function ChatPage() {
                     "flex-1 space-y-2 min-w-0 max-w-full",
                     isUser && "flex flex-col items-end"
                   )}>
-                    {actions && actions.length > 0 && !isUser && (
-                      <ActionSteps actions={actions} className="mb-2" />
-                    )}
                     <Card className={cn(
                       "p-3 sm:p-4 overflow-hidden max-w-full shadow-sm hover:shadow-md transition-shadow",
                       isUser ? "bg-primary text-primary-foreground" : "bg-card"
@@ -455,9 +464,6 @@ export default function ChatPage() {
                   <Bot className="h-4 w-4 sm:h-5 sm:w-5 text-primary" />
                 </div>
                 <div className="flex-1 space-y-2 min-w-0 max-w-full">
-                  {streamingActions.length > 0 && (
-                    <ActionSteps actions={streamingActions} className="mb-2 animate-in fade-in slide-in-from-top-2 duration-200" />
-                  )}
                   <Card className="p-3 sm:p-4 bg-card overflow-hidden max-w-full shadow-sm">
                     <div className="max-w-full overflow-hidden">
                       {streamingMessage ? (

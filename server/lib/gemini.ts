@@ -18,6 +18,11 @@ interface ChatResponse {
 
 const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY || "" });
 
+// Google Search Grounding tool configuration
+const groundingTool = {
+  googleSearch: {},
+};
+
 export async function chatWithAI(
   messages: Message[],
   systemPrompt?: string
@@ -37,7 +42,10 @@ export async function chatWithAI(
 
   const response = await ai.models.generateContent({
     model: selectedModel,
-    config: systemPrompt ? { systemInstruction: systemPrompt } : undefined,
+    config: {
+      systemInstruction: systemPrompt,
+      tools: [groundingTool],
+    },
     contents,
   });
 
@@ -70,7 +78,10 @@ export async function* chatWithAIStream(
 
   const stream = await ai.models.generateContentStream({
     model: selectedModel,
-    config: systemPrompt ? { systemInstruction: systemPrompt } : undefined,
+    config: {
+      systemInstruction: systemPrompt,
+      tools: [groundingTool],
+    },
     contents,
   });
 
@@ -220,7 +231,7 @@ You have access to the following tools:
 - delete_file: Delete a file from both S3 storage and E2B sandbox permanently
 - run_shell: Execute shell commands in the E2B sandbox terminal (supports long-running commands like npm run dev)
 - run_code: Execute code in the E2B code interpreter (Python/JavaScript)
-- serper_web_search: Search the web for documentation, libraries, best practices, or any information needed DURING your work (not after)
+- Google Search: You have built-in access to Google Search - just ask questions naturally and I'll search for documentation, libraries, best practices, or any information needed DURING your work (not after)
 - configure_workflow: Configure the run command for this project (automatically runs when sandbox is recreated and available via manual run button)
 
 REAL-TIME ACTION TRACKING:
@@ -243,7 +254,7 @@ CRITICAL RULES:
 8. DEFAULT STACK: Always create apps using React + Vite for frontend and Node.js + Express.js for backend (when backend is needed) unless the user explicitly requests a different technology
 9. When starting a long-running server (npm run dev, etc.), ALWAYS use configure_workflow to save the command so it auto-runs when the sandbox restarts
 10. If you create a vite.config.js or vite.config.ts always set server.host to '0.0.0.0', server.port to 3000, and server.allowedHosts to true
-11. USE WEB SEARCH PROACTIVELY: When you need to know how to use a library, check documentation, find best practices, or solve technical problems - use serper_web_search DURING your work, not after
+11. USE GOOGLE SEARCH PROACTIVELY: When you need to know how to use a library, check documentation, find best practices, or solve technical problems - just ask naturally and Google Search will provide real-time information DURING your work (not after)
 12. Shell commands auto-forward results back to you - you'll see stdout/stderr automatically after execution
 13. Important: Always perform the real tool call then only use the action tool - never use the action tool before creating that file or running that command
 14. AUTONOMOUS DEBUGGING: If something doesn't work, proactively search for solutions, check error messages, and fix issues without waiting for user input

@@ -736,14 +736,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
                 if (clientConnected) {
                   res.write(`data: ${JSON.stringify({ type: 'tool', name: toolName, summary })}\n\n`);
                 }
-              } else if (toolName === 'serper_web_search') {
-                const query = args.query;
-                const result = await webSearch(query);
-                const summary = `Searched: ${query}`;
-                toolCalls.push({ name: toolName, arguments: args, summary, result });
-                if (clientConnected) {
-                  res.write(`data: ${JSON.stringify({ type: 'tool', name: toolName, summary })}\n\n`);
-                }
               } else if (toolName === 'configure_workflow') {
                 const { command } = args;
                 

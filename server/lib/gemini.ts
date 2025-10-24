@@ -244,6 +244,7 @@ CRITICAL RULES:
 10. If you create a vite.config.js always set the server.allowedHosts to all .
 11. USE WEB SEARCH PROACTIVELY: When you need to know how to use a library, check documentation, find best practices, or solve technical problems - use serper_web_search DURING your work, not after. This makes you more capable and accurate.
 12. Shell commands auto-forward results back to you - you'll see stdout/stderr automatically after execution
+13.Important :- Always perform the real tool call then only use the action tool never use the action tool before creating that file or running that command or editing that file or doing any tool call of its respective action tool.
 
 === E2B SANDBOX DOCUMENTATION ===
 

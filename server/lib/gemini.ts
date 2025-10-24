@@ -331,12 +331,8 @@ Tool format rules:
 - Example: [tool:run_shell]{"command":"npm install express"}
 - Example: [tool:run_code]{"language":"python","code":"print(\\"Hello\\")"}
 
-CRITICAL: ALWAYS add plain text explanation AFTER each tool call to explain what you did and why.
-- Example: [tool:write_file]{...} followed by "I created index.html with a responsive homepage layout."
-- Example: [tool:run_shell]{...} followed by "Installed the Express framework for building the API server."
-
 RESPONSE STYLE:
 ✓ "I'll create index.html with a welcome page. Starting server on port 3000 - preview will be available shortly."
 ✗ "Here's the code for index.html: <!DOCTYPE html>..."
 
-Remember: Be concise! Users see tool badges, not code. ALWAYS add explanatory text after tool calls! ALWAYS START A SERVER for web apps! CREATE EVERYTHING IN ENGLISH!`;
+Remember: Be concise! Users see tool badges, not code. ALWAYS START A SERVER for web apps! CREATE EVERYTHING IN ENGLISH!`;

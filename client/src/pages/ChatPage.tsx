@@ -73,20 +73,8 @@ function MessageContent({ content }: { content: string }) {
   // Remove standalone tool call patterns without JSON: [tool:name] (including partial ones)
   cleanedContent = cleanedContent.replace(/\[tool:[^\]]*\]/g, '');
   
-  // Remove any remaining JSON-like structures that start with { and contain common JSON keys
-  cleanedContent = cleanedContent.replace(/\{[\s\S]*?"(?:content|path|code|command|name|language|dependencies|scripts|type|version)"[\s\S]*?\}/g, '');
-  
-  // Remove JSON fragments that start with comma or closing brace (leftover from tool calls)
-  cleanedContent = cleanedContent.replace(/^[\s,}\]]+/gm, '');
-  
-  // Remove lines that are just JSON property names with colons
-  cleanedContent = cleanedContent.replace(/^\s*"[^"]+"\s*:\s*$/gm, '');
-  
-  // Remove lines that look like partial JSON structures
-  cleanedContent = cleanedContent.replace(/^\s*[\{\}\[\],]\s*$/gm, '');
-  
-  // Remove "from 'package'" import fragments
-  cleanedContent = cleanedContent.replace(/from\s+['"][^'"]+['"]\s*;?\s*$/gm, '');
+  // Remove any remaining JSON-like structures that start with { and contain "content", "path", "code", etc.
+  cleanedContent = cleanedContent.replace(/\{[\s\S]*?"(?:content|path|code|command|name)"[\s\S]*?\}/g, '');
   
   // Clean up extra whitespace and newlines
   cleanedContent = cleanedContent.replace(/\n{3,}/g, '\n\n').trim();

@@ -628,74 +628,97 @@ export default function ChatPage() {
       </div>
 
       {/* Input Area */}
-      <div className="border-t border-border bg-card p-3 sm:p-4 md:p-6 pb-20 md:pb-6">
-        <div className="max-w-4xl mx-auto space-y-2">
-          {/* Selected images preview */}
-          {selectedImages.length > 0 && (
-            <div className="flex flex-wrap gap-2">
-              {selectedImages.map((image, index) => (
-                <div key={index} className="relative group">
-                  <img
-                    src={URL.createObjectURL(image)}
-                    alt={`Upload ${index + 1}`}
-                    className="h-16 w-16 object-cover rounded border border-border"
-                  />
-                  <Button
-                    variant="destructive"
-                    size="icon"
-                    className="absolute -top-2 -right-2 h-5 w-5 rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
-                    onClick={() => removeImage(index)}
-                  >
-                    <X className="h-3 w-3" />
-                  </Button>
+      <div className="border-t border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80 p-3 sm:p-4 md:p-6 pb-20 md:pb-6">
+        <div className="max-w-4xl mx-auto">
+          <div className="bg-card rounded-xl border border-border shadow-lg overflow-hidden">
+            {/* Selected images preview */}
+            {selectedImages.length > 0 && (
+              <div className="p-3 border-b border-border bg-muted/30">
+                <div className="flex items-center gap-2 mb-2">
+                  <ImageIcon className="h-4 w-4 text-muted-foreground" />
+                  <span className="text-xs font-medium text-muted-foreground">
+                    {selectedImages.length} {selectedImages.length === 1 ? 'image' : 'images'} selected
+                  </span>
                 </div>
-              ))}
+                <div className="flex flex-wrap gap-2">
+                  {selectedImages.map((image, index) => (
+                    <div key={index} className="relative group">
+                      <div className="h-20 w-20 rounded-lg overflow-hidden border-2 border-border bg-muted">
+                        <img
+                          src={URL.createObjectURL(image)}
+                          alt={`Upload ${index + 1}`}
+                          className="h-full w-full object-cover"
+                        />
+                      </div>
+                      <Button
+                        variant="destructive"
+                        size="icon"
+                        className="absolute -top-2 -right-2 h-6 w-6 rounded-full shadow-md opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity"
+                        onClick={() => removeImage(index)}
+                        title="Remove image"
+                      >
+                        <X className="h-3 w-3" />
+                      </Button>
+                    </div>
+                  ))}
+                  {selectedImages.length < 5 && (
+                    <button
+                      onClick={() => fileInputRef.current?.click()}
+                      disabled={isStreaming}
+                      className="h-20 w-20 rounded-lg border-2 border-dashed border-muted-foreground/30 hover:border-muted-foreground/50 bg-muted/50 hover:bg-muted transition-colors flex items-center justify-center group disabled:opacity-50 disabled:cursor-not-allowed"
+                      title="Add more images"
+                    >
+                      <ImageIcon className="h-5 w-5 text-muted-foreground group-hover:text-foreground transition-colors" />
+                    </button>
+                  )}
+                </div>
+              </div>
+            )}
+            
+            <div className="flex gap-2 p-2">
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/*"
+                multiple
+                onChange={handleImageSelect}
+                className="hidden"
+              />
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => fileInputRef.current?.click()}
+                disabled={isStreaming || selectedImages.length >= 5}
+                className="h-10 w-10 shrink-0 hover:bg-muted"
+                title={selectedImages.length >= 5 ? "Maximum 5 images allowed" : "Upload images (max 5)"}
+                data-testid="button-upload-image"
+              >
+                <ImageIcon className="h-5 w-5" />
+              </Button>
+              <Textarea
+                ref={textareaRef}
+                placeholder="Describe what you want to build..."
+                value={input}
+                onChange={(e) => setInput(e.target.value)}
+                onKeyDown={handleKeyPress}
+                rows={1}
+                className="min-h-[40px] max-h-32 resize-none text-sm sm:text-base border-0 focus-visible:ring-0 focus-visible:ring-offset-0 shadow-none bg-transparent"
+                data-testid="input-chat-message"
+              />
+              <Button
+                onClick={handleSend}
+                disabled={(!input.trim() && selectedImages.length === 0) || isStreaming}
+                size="icon"
+                className="h-10 w-10 shrink-0 rounded-lg"
+                data-testid="button-send-message"
+              >
+                {isStreaming ? (
+                  <Loader2 className="h-5 w-5 animate-spin" />
+                ) : (
+                  <Send className="h-5 w-5" />
+                )}
+              </Button>
             </div>
-          )}
-          
-          <div className="flex gap-2 sm:gap-3">
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept="image/*"
-              multiple
-              onChange={handleImageSelect}
-              className="hidden"
-            />
-            <Button
-              variant="outline"
-              size="icon"
-              onClick={() => fileInputRef.current?.click()}
-              disabled={isStreaming}
-              className="h-11 w-11 shrink-0"
-              title="Upload images"
-              data-testid="button-upload-image"
-            >
-              <ImageIcon className="h-5 w-5" />
-            </Button>
-            <Textarea
-              ref={textareaRef}
-              placeholder="Describe what you want to build..."
-              value={input}
-              onChange={(e) => setInput(e.target.value)}
-              onKeyDown={handleKeyPress}
-              rows={1}
-              className="min-h-[44px] max-h-32 resize-none text-sm sm:text-base"
-              data-testid="input-chat-message"
-            />
-            <Button
-              onClick={handleSend}
-              disabled={(!input.trim() && selectedImages.length === 0) || isStreaming}
-              size="icon"
-              className="h-11 w-11 shrink-0 shadow-md hover:shadow-lg transition-shadow"
-              data-testid="button-send-message"
-            >
-              {isStreaming ? (
-                <Loader2 className="h-5 w-5 animate-spin" />
-              ) : (
-                <Send className="h-5 w-5" />
-              )}
-            </Button>
           </div>
         </div>
       </div>

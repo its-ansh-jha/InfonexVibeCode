@@ -245,11 +245,9 @@ export default function ChatPage() {
   const [streamingTools, setStreamingTools] = useState<ToolCall[]>([]);
   const [streamingActions, setStreamingActions] = useState<Action[]>([]);
   const [selectedImages, setSelectedImages] = useState<File[]>([]);
-  const [showImageOptions, setShowImageOptions] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const cameraInputRef = useRef<HTMLInputElement>(null);
 
   const { data: messages, isLoading } = useQuery<Message[]>({
     queryKey: ["/api/messages", projectId],
@@ -449,30 +447,10 @@ export default function ChatPage() {
     if (fileInputRef.current) {
       fileInputRef.current.value = '';
     }
-    if (cameraInputRef.current) {
-      cameraInputRef.current.value = '';
-    }
-    setShowImageOptions(false);
   };
 
   const removeImage = (index: number) => {
     setSelectedImages(prev => prev.filter((_, i) => i !== index));
-  };
-
-  const handleImageButtonClick = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    if (selectedImages.length >= 5) return;
-    setShowImageOptions(!showImageOptions);
-  };
-
-  const handleCameraCapture = () => {
-    cameraInputRef.current?.click();
-    setShowImageOptions(false);
-  };
-
-  const handleDeviceSelect = () => {
-    fileInputRef.current?.click();
-    setShowImageOptions(false);
   };
 
   const getToolIcon = (toolName: string) => {
@@ -685,7 +663,7 @@ export default function ChatPage() {
                   ))}
                   {selectedImages.length < 5 && (
                     <button
-                      onClick={(e) => handleImageButtonClick(e)}
+                      onClick={() => fileInputRef.current?.click()}
                       disabled={isStreaming}
                       className="h-20 w-20 rounded-lg border-2 border-dashed border-muted-foreground/30 hover:border-muted-foreground/50 bg-muted/50 hover:bg-muted transition-colors flex items-center justify-center group disabled:opacity-50 disabled:cursor-not-allowed"
                       title="Add more images"
@@ -706,58 +684,17 @@ export default function ChatPage() {
                 onChange={handleImageSelect}
                 className="hidden"
               />
-              <input
-                ref={cameraInputRef}
-                type="file"
-                accept="image/*"
-                capture="environment"
-                onChange={handleImageSelect}
-                className="hidden"
-              />
-              <div className="relative">
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={(e) => handleImageButtonClick(e)}
-                  disabled={isStreaming || selectedImages.length >= 5}
-                  className="h-10 w-10 shrink-0 hover:bg-muted"
-                  title={selectedImages.length >= 5 ? "Maximum 5 images allowed" : "Upload images (max 5)"}
-                  data-testid="button-upload-image"
-                >
-                  <ImageIcon className="h-5 w-5" />
-                </Button>
-                {showImageOptions && (
-                  <>
-                    <div 
-                      className="fixed inset-0 z-40" 
-                      onClick={() => setShowImageOptions(false)}
-                    />
-                    <div className="absolute bottom-full left-0 mb-2 z-50 bg-popover border border-border rounded-lg shadow-lg overflow-hidden animate-in fade-in zoom-in-95 duration-200">
-                      <Button
-                        variant="ghost"
-                        onClick={handleCameraCapture}
-                        className="w-full justify-start px-4 py-3 h-auto rounded-none hover:bg-accent text-sm"
-                      >
-                        <svg className="h-4 w-4 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
-                        </svg>
-                        Take Photo
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        onClick={handleDeviceSelect}
-                        className="w-full justify-start px-4 py-3 h-auto rounded-none hover:bg-accent text-sm border-t border-border"
-                      >
-                        <svg className="h-4 w-4 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                        </svg>
-                        Choose from Device
-                      </Button>
-                    </div>
-                  </>
-                )}
-              </div>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => fileInputRef.current?.click()}
+                disabled={isStreaming || selectedImages.length >= 5}
+                className="h-10 w-10 shrink-0 hover:bg-muted"
+                title={selectedImages.length >= 5 ? "Maximum 5 images allowed" : "Upload images (max 5)"}
+                data-testid="button-upload-image"
+              >
+                <ImageIcon className="h-5 w-5" />
+              </Button>
               <Textarea
                 ref={textareaRef}
                 placeholder="Ask anything to build..."

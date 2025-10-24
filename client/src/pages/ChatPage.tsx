@@ -85,54 +85,115 @@ function MessageContent({ content }: { content: string }) {
   }
   
   // Parse content into parts: text, code blocks, and actions
-  const parts: Array<{ type: 'text' | 'code' | 'action'; content: string; language?: string }> = [];
+  const parts: Array<{ type: 'text' | 'code' | 'action' | 'actions'; content: string; language?: string; actions?: Action[] }> = [];
   
-  // Combined regex to match both code blocks and actions
-  const combinedRegex = /(?:```(\w+)?\n?([\s\S]*?)```)|(?:\[action:([^\]]+)\])/g;
-  let lastIndex = 0;
-  let match;
-
-  while ((match = combinedRegex.exec(cleanedContent)) !== null) {
-    // Add text before this match
-    if (match.index > lastIndex) {
-      const textContent = cleanedContent.slice(lastIndex, match.index).trim();
-      if (textContent) {
-        parts.push({
-          type: 'text',
-          content: textContent
-        });
-      }
-    }
+  // Split by lines to detect action lists
+  const lines = cleanedContent.split('\n');
+  let i = 0;
+  
+  while (i < lines.length) {
+    const line = lines[i];
     
-    // Determine what was matched
-    if (match[3]) {
-      // Action pattern matched
-      parts.push({
-        type: 'action',
-        content: match[3].trim()
-      });
-    } else if (match[2] !== undefined) {
-      // Code block matched
-      const codeContent = match[2].trim();
-      if (codeContent) {
+    // Check for code block start
+    if (line.trim().startsWith('```')) {
+      const language = line.trim().slice(3) || 'code';
+      let codeContent = '';
+      i++;
+      
+      // Collect code until closing ```
+      while (i < lines.length && !lines[i].trim().startsWith('```')) {
+        codeContent += lines[i] + '\n';
+        i++;
+      }
+      
+      if (codeContent.trim()) {
         parts.push({
           type: 'code',
-          content: codeContent,
-          language: match[1] || 'code'
+          content: codeContent.trim(),
+          language
         });
       }
+      i++; // Skip closing ```
+      continue;
     }
     
-    lastIndex = match.index + match[0].length;
-  }
-  
-  // Add remaining text
-  if (lastIndex < cleanedContent.length) {
-    const remainingContent = cleanedContent.slice(lastIndex).trim();
-    if (remainingContent) {
+    // Check for single action pattern [action:...]
+    const actionMatch = line.match(/^\[action:([^\]]+)\]$/);
+    if (actionMatch) {
+      parts.push({
+        type: 'action',
+        content: actionMatch[1].trim()
+      });
+      i++;
+      continue;
+    }
+    
+    // Check for action list patterns (Created/Ran/Started/etc.)
+    const actionListMatch = line.match(/^(Created|Ran shell:|Started:|Edited|Installed|Configured)\s+(.+)$/);
+    if (actionListMatch) {
+      const actionsList: Action[] = [];
+      
+      // Collect consecutive action lines
+      while (i < lines.length) {
+        const currentLine = lines[i];
+        const match = currentLine.match(/^(Created|Ran shell:|Started:|Edited|Installed|Configured)\s+(.+)$/);
+        
+        if (match) {
+          const prefix = match[1];
+          const detail = match[2].trim();
+          
+          let description = '';
+          if (prefix === 'Ran shell:') {
+            description = `Ran shell command ${detail}`;
+          } else if (prefix === 'Started:') {
+            description = `Started ${detail}`;
+          } else {
+            description = `${prefix} ${detail}`;
+          }
+          
+          actionsList.push({
+            description,
+            status: 'completed'
+          });
+          i++;
+        } else {
+          break;
+        }
+      }
+      
+      if (actionsList.length > 0) {
+        parts.push({
+          type: 'actions',
+          content: '',
+          actions: actionsList
+        });
+      }
+      continue;
+    }
+    
+    // Regular text line - collect consecutive text lines
+    let textContent = line;
+    i++;
+    
+    while (i < lines.length) {
+      const nextLine = lines[i];
+      
+      // Stop if we hit a code block, action, or action list
+      if (nextLine.trim().startsWith('```') || 
+          nextLine.match(/^\[action:([^\]]+)\]$/) ||
+          nextLine.match(/^(Created|Ran shell:|Started:|Edited|Installed|Configured)\s+(.+)$/)) {
+        break;
+      }
+      
+      textContent += '\n' + nextLine;
+      i++;
+    }
+    
+    const trimmedText = textContent.trim();
+    if (trimmedText) {
       parts.push({
         type: 'text',
-        content: remainingContent
+        content: trimmedText
       });
     }
   }
@@ -152,6 +213,12 @@ function MessageContent({ content }: { content: string }) {
           return (
             <div key={idx} className="my-1">
               <ActionSteps actions={[{ description: part.content, status: 'completed' }]} />
+            </div>
+          );
+        } else if (part.type === 'actions' && part.actions) {
+          return (
+            <div key={idx} className="my-1">
+              <ActionSteps actions={part.actions} />
             </div>
           );
         } else {

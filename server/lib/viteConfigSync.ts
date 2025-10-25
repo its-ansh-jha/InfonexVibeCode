@@ -28,9 +28,11 @@ export async function ensureViteConfigAllowedHosts(projectId: string, sandboxUrl
     // Build the allowedHosts array
     const allowedHosts = ['all', '.e2b.dev'];
     if (sandboxUrl) {
+      // E2B URLs are in format: https://3000-{sandbox-id}.e2b.dev
+      // We need to add the full hostname with port prefix
       try {
         const url = new URL(sandboxUrl);
-        const hostname = url.hostname;
+        const hostname = url.hostname; // e.g., "3000-abc123.e2b.dev"
         if (!allowedHosts.includes(hostname)) {
           allowedHosts.push(hostname);
         }
@@ -109,9 +111,11 @@ export async function validateViteConfigOnWrite(projectId: string, path: string,
   // Build the allowedHosts array
   const allowedHosts = ['all', '.e2b.dev'];
   if (sandboxUrl) {
+    // E2B URLs are in format: https://3000-{sandbox-id}.e2b.dev
+    // We need to add the full hostname with port prefix
     try {
       const url = new URL(sandboxUrl);
-      const hostname = url.hostname;
+      const hostname = url.hostname; // e.g., "3000-abc123.e2b.dev"
       if (!allowedHosts.includes(hostname)) {
         allowedHosts.push(hostname);
       }

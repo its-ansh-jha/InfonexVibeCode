@@ -690,6 +690,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
                                        command.includes('streamlit run');
 
                 if (isServerCommand) {
+                  // Add 5-second delay for npm run dev commands
+                  if (command.includes('npm run dev')) {
+                    // Wait 5 seconds before executing
+                    await new Promise(resolve => setTimeout(resolve, 5000));
+                  }
+                  
                   // For server commands, start in background and don't wait
                   executeShellCommand(projectId, command).catch(err => 
                     console.error('Background command error:', err)

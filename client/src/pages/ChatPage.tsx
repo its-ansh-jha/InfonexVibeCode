@@ -69,27 +69,27 @@ function CodeBlock({ code, language = "javascript" }: { code: string; language?:
 function MessageContent({ content }: { content: string }) {
   // Remove tool call patterns with JSON: [tool:name]{...}
   let cleanedContent = content.replace(/\[tool:\w+\]\{[^]*?\}(?=\s*(?:\[tool:|\[action:|$))/g, '');
-  
+
   // Remove standalone tool call patterns without JSON: [tool:name] (including partial ones)
   cleanedContent = cleanedContent.replace(/\[tool:[^\]]*\]/g, '');
-  
+
   // Remove JSON objects with proper brace matching (handles nested structures)
   let depth = 0;
   let inString = false;
   let escape = false;
   let result = '';
   let jsonStart = -1;
-  
+
   for (let i = 0; i < cleanedContent.length; i++) {
     const char = cleanedContent[i];
     const prevChar = i > 0 ? cleanedContent[i - 1] : '';
-    
+
     // Handle string escaping
     if (char === '"' && !escape) {
       inString = !inString;
     }
     escape = char === '\\' && !escape;
-    
+
     if (!inString) {
       if (char === '{') {
         if (depth === 0) jsonStart = i;
@@ -108,51 +108,51 @@ function MessageContent({ content }: { content: string }) {
         }
       }
     }
-    
+
     // Only add character if we're not inside a JSON block
     if (depth === 0 && jsonStart === -1) {
       result += char;
     }
   }
-  
+
   cleanedContent = result;
-  
+
   // Remove any remaining partial JSON patterns
   cleanedContent = cleanedContent.replace(/\{[\s\S]*?(?:content|path|code|command|name|language|query)[\s\S]*?\}/g, '');
-  
+
   // Remove standalone curly braces and brackets
   cleanedContent = cleanedContent.replace(/^\s*[\{\}\[\]]+\s*$/gm, '');
-  
+
   // Clean up extra whitespace and newlines
   cleanedContent = cleanedContent.replace(/\n{3,}/g, '\n\n').trim();
-  
+
   // If the content is just JSON/code artifacts, return nothing
   if (!cleanedContent || /^\s*[\{\}\[\]",:]*\s*$/.test(cleanedContent)) {
     return null;
   }
-  
+
   // Parse content into parts: text, code blocks, and actions
   const parts: Array<{ type: 'text' | 'code' | 'action' | 'actions'; content: string; language?: string; actions?: Action[] }> = [];
-  
+
   // Split by lines to detect action lists
   const lines = cleanedContent.split('\n');
   let i = 0;
-  
+
   while (i < lines.length) {
     const line = lines[i];
-    
+
     // Check for code block start
     if (line.trim().startsWith('```')) {
       const language = line.trim().slice(3) || 'code';
       let codeContent = '';
       i++;
-      
+
       // Collect code until closing ```
       while (i < lines.length && !lines[i].trim().startsWith('```')) {
         codeContent += lines[i] + '\n';
         i++;
       }
-      
+
       if (codeContent.trim()) {
         parts.push({
           type: 'code',
@@ -163,7 +163,7 @@ function MessageContent({ content }: { content: string }) {
       i++; // Skip closing ```
       continue;
     }
-    
+
     // Check for single action pattern [action:...]
     const actionMatch = line.match(/^\[action:([^\]]+)\]$/);
     if (actionMatch) {
@@ -174,24 +174,24 @@ function MessageContent({ content }: { content: string }) {
       i++;
       continue;
     }
-    
+
     // Check for action list patterns (Created/Ran/Started/Creating/Installing/etc.)
     const actionListMatch = line.match(/^(Creating|Installing|Starting|Created|Ran shell:|Started:|Edited|Installed|Configured)\s+(.+)$/);
     if (actionListMatch) {
       const actionsList: Action[] = [];
-      
+
       // Collect consecutive action lines
       while (i < lines.length) {
         const currentLine = lines[i];
         const match = currentLine.match(/^(Creating|Installing|Starting|Created|Ran shell:|Started:|Edited|Installed|Configured)\s+(.+)$/);
-        
+
         if (match) {
           const prefix = match[1];
           const detail = match[2].trim();
-          
+
           let description = '';
           let status: 'completed' | 'in_progress' = 'completed';
-          
+
           // "Creating", "Installing", "Starting" are in-progress actions
           if (prefix === 'Creating' || prefix === 'Installing' || prefix === 'Starting') {
             status = 'in_progress';
@@ -203,7 +203,7 @@ function MessageContent({ content }: { content: string }) {
           } else {
             description = `${prefix} ${detail}`;
           }
-          
+
           actionsList.push({
             description,
             status
@@ -213,7 +213,7 @@ function MessageContent({ content }: { content: string }) {
           break;
         }
       }
-      
+
       if (actionsList.length > 0) {
         parts.push({
           type: 'actions',
@@ -223,25 +223,25 @@ function MessageContent({ content }: { content: string }) {
       }
       continue;
     }
-    
+
     // Regular text line - collect consecutive text lines
     let textContent = line;
     i++;
-    
+
     while (i < lines.length) {
       const nextLine = lines[i];
-      
+
       // Stop if we hit a code block, action, or action list
       if (nextLine.trim().startsWith('```') || 
           nextLine.match(/^\[action:([^\]]+)\]$/) ||
           nextLine.match(/^(Created|Ran shell:|Started:|Edited|Installed|Configured)\s+(.+)$/)) {
         break;
       }
-      
+
       textContent += '\n' + nextLine;
       i++;
     }
-    
+
     const trimmedText = textContent.trim();
     if (trimmedText) {
       parts.push({
@@ -329,7 +329,7 @@ export default function ChatPage() {
 
   const handleSend = async () => {
     if ((!input.trim() && selectedImages.length === 0) || isStreaming) return;
-    
+
     const userMessage = input;
     const imagesToUpload = selectedImages;
     setInput("");
@@ -352,7 +352,7 @@ export default function ChatPage() {
     try {
       // Get Firebase ID token for authentication
       const idToken = await auth.currentUser?.getIdToken();
-      
+
       // Upload images if any
       let attachments: string[] = [];
       if (imagesToUpload.length > 0) {
@@ -360,7 +360,7 @@ export default function ChatPage() {
           const formData = new FormData();
           formData.append('file', image);
           formData.append('projectId', projectId!);
-          
+
           const uploadResponse = await fetch("/api/upload/image", {
             method: "POST",
             headers: {
@@ -368,14 +368,14 @@ export default function ChatPage() {
             },
             body: formData,
           });
-          
+
           if (uploadResponse.ok) {
             const { url } = await uploadResponse.json();
             attachments.push(url);
           }
         }
       }
-      
+
       const response = await fetch("/api/messages/stream", {
         method: "POST",
         headers: {
@@ -427,13 +427,41 @@ export default function ChatPage() {
               const completedActions: Action[] = data.actions;
               setStreamingActions(completedActions);
             } else if (data.type === 'tool') {
-              const toolCall: ToolCall = {
-                name: data.name,
-                summary: data.summary,
-                result: data.result,
-              };
-              tools.push(toolCall);
-              setStreamingTools([...tools]);
+              const toolCall: ToolCall = data.toolCall;
+              
+              // --- ADDED LOGIC FOR NPM RUN DEV DELAY ---
+              let isNpmRunDevDelayed = false;
+              if (toolCall.name === 'run_shell') {
+                const command = toolCall.arguments.command;
+                const isLongRunning = 
+                  command.includes('npm run dev') ||
+                  command.includes('npm start') ||
+                  command.includes('python -m http.server') ||
+                  command.includes('node ') ||
+                  command.match(/python\s+.*\.py/) ||
+                  command.includes('flask run') ||
+                  command.includes('streamlit run');
+
+                const isNpmRunDev = command.includes('npm run dev');
+
+                if (isNpmRunDev) {
+                  isNpmRunDevDelayed = true;
+                  // Add a 5-second delay before showing the command
+                  setTimeout(() => {
+                    setStreamingTools(prev => [...prev, { ...toolCall, summary: `${command} (starting in 5s...)` }]);
+                  }, 5000);
+                } else {
+                  tools.push(toolCall);
+                }
+              } else {
+                tools.push(toolCall);
+              }
+              
+              if (!isNpmRunDevDelayed) {
+                setStreamingTools([...tools]);
+              }
+              // --- END ADDED LOGIC ---
+
             } else if (data.type === 'error') {
               toast({
                 title: "Error",
@@ -443,7 +471,7 @@ export default function ChatPage() {
             } else if (data.type === 'done') {
               queryClient.invalidateQueries({ queryKey: ["/api/messages", projectId] });
               queryClient.invalidateQueries({ queryKey: ["/api/files", projectId] });
-              
+
               // Show notification if tab was hidden
               if (wasHidden) {
                 toast({
@@ -459,7 +487,7 @@ export default function ChatPage() {
       // Always refresh to show any work that was completed
       queryClient.invalidateQueries({ queryKey: ["/api/messages", projectId] });
       queryClient.invalidateQueries({ queryKey: ["/api/files", projectId] });
-      
+
       if (wasHidden) {
         toast({
           title: "Processing Complete",
@@ -630,7 +658,7 @@ export default function ChatPage() {
                 </div>
               );
             })}
-            
+
             {/* Streaming Message */}
             {isStreaming && (
               <div className="flex gap-2 sm:gap-4 justify-start max-w-full animate-in fade-in slide-in-from-bottom-2 duration-300">
@@ -668,7 +696,7 @@ export default function ChatPage() {
                 </div>
               </div>
             )}
-            
+
             <div ref={messagesEndRef} />
           </div>
         )}
@@ -721,7 +749,7 @@ export default function ChatPage() {
                 </div>
               </div>
             )}
-            
+
             <div className="flex gap-2 p-2">
               <input
                 ref={fileInputRef}

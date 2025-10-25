@@ -715,6 +715,37 @@ export async function registerRoutes(app: Express): Promise<Server> {
                 if (clientConnected) {
                   res.write(`data: ${JSON.stringify({ type: 'tool', name: toolName, summary })}\n\n`);
                 }
+              } else if (toolName === 'list_files') {
+                // List all files in the project
+                const files = await storage.getFilesByProjectId(projectId);
+                const fileList = files.map(f => ({
+                  path: f.path,
+                  size: f.size,
+                  mimeType: f.mimeType,
+                }));
+
+                const summary = `Listed ${files.length} files`;
+                toolCalls.push({ name: toolName, arguments: args, summary, result: fileList });
+                if (clientConnected) {
+                  res.write(`data: ${JSON.stringify({ type: 'tool', name: toolName, summary })}\n\n`);
+                }
+              } else if (toolName === 'read_file') {
+                const { path } = args;
+
+                // Get file from database
+                const existingFile = await storage.getFileByPath(projectId, path);
+                if (!existingFile) {
+                  throw new Error(`File not found: ${path}`);
+                }
+
+                // Read content from S3
+                const content = await getFileFromS3(existingFile.s3Key);
+
+                const summary = `Read ${path} (${content.length} characters)`;
+                toolCalls.push({ name: toolName, arguments: args, summary, result: { content, path } });
+                if (clientConnected) {
+                  res.write(`data: ${JSON.stringify({ type: 'tool', name: toolName, summary })}\n\n`);
+                }
               } else if (toolName === 'run_shell') {
                 const { command } = args;
 

@@ -212,6 +212,10 @@ export function getToolCallSummary(toolName: string, args: Record<string, any>):
       return `Edited ${args.path}`;
     case "delete_file":
       return `Deleted ${args.path}`;
+    case "list_files":
+      return `Listed all files`;
+    case "read_file":
+      return `Read ${args.path}`;
     case "run_shell":
       return `Ran shell command: ${args.command}`;
     case "serper_web_search":
@@ -229,6 +233,8 @@ You have access to the following tools:
 - write_file: Create or overwrite a file in the project's S3 storage and E2B sandbox
 - edit_file: Edit specific parts of an existing file
 - delete_file: Delete a file from both S3 storage and E2B sandbox permanently
+- list_files: List all files in the current project (searches both S3 storage and E2B sandbox)
+- read_file: Read the content of any file from S3 storage or E2B sandbox
 - run_shell: Execute shell commands in the E2B sandbox terminal (supports long-running commands like npm run dev)
 - run_code: Execute code in the E2B code interpreter (Python/JavaScript)
 - Google Search: You have built-in access to Google Search - just ask questions naturally and I'll search for documentation, libraries, best practices, or any information needed DURING your work (not after)

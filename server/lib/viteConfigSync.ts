@@ -1,4 +1,3 @@
-
 import { getFileFromS3 } from './s3';
 import { storage } from '../storage';
 import { readFileFromSandbox, writeFileToSandbox } from './e2b';
@@ -11,7 +10,7 @@ export async function ensureViteConfigAllowedHosts(projectId: string): Promise<v
   try {
     // Check if vite.config.ts exists in the database
     const viteConfigFile = await storage.getFileByPath(projectId, 'vite.config.ts');
-    
+
     if (!viteConfigFile) {
       // File doesn't exist, nothing to do
       return;
@@ -28,7 +27,9 @@ export async function ensureViteConfigAllowedHosts(projectId: string): Promise<v
 
     // Check if allowedHosts is already set correctly
     const hasCorrectAllowedHosts = content.includes("allowedHosts: 'all'") || 
-                                    content.includes('allowedHosts: "all"');
+                                    content.includes('allowedHosts: "all"') ||
+                                    content.includes("allowedHosts: ['all', '.e2b.dev']") ||
+                                    content.includes('allowedHosts: ["all", ".e2b.dev"]');
 
     if (hasCorrectAllowedHosts) {
       // Already configured correctly
@@ -45,13 +46,13 @@ export async function ensureViteConfigAllowedHosts(projectId: string): Promise<v
         // Replace existing allowedHosts value
         updatedContent = content.replace(
           /allowedHosts:\s*(?:true|false|['"][^'"]*['"]|\[.*?\])/,
-          "allowedHosts: 'all'"
+          "allowedHosts: ['all', '.e2b.dev']"
         );
       } else {
         // Add allowedHosts to existing server config
         updatedContent = content.replace(
           /server:\s*{/,
-          "server: {\n    allowedHosts: 'all',"
+          "server: {\n    allowedHosts: ['all', '.e2b.dev'],"
         );
       }
     } else {
@@ -60,12 +61,12 @@ export async function ensureViteConfigAllowedHosts(projectId: string): Promise<v
       if (content.includes('export default defineConfig({')) {
         updatedContent = content.replace(
           /export default defineConfig\({/,
-          `export default defineConfig({\n  server: {\n    host: '0.0.0.0',\n    port: 3000,\n    allowedHosts: 'all'\n  },`
+          `export default defineConfig({\n  server: {\n    host: '0.0.0.0',\n    port: 3000,\n    allowedHosts: ['all', '.e2b.dev']\n  },`
         );
       } else if (content.includes('export default {')) {
         updatedContent = content.replace(
           /export default {/,
-          `export default {\n  server: {\n    host: '0.0.0.0',\n    port: 3000,\n    allowedHosts: 'all'\n  },`
+          `export default {\n  server: {\n    host: '0.0.0.0',\n    port: 3000,\n    allowedHosts: ['all', '.e2b.dev']\n  },`
         );
       }
     }
@@ -74,7 +75,7 @@ export async function ensureViteConfigAllowedHosts(projectId: string): Promise<v
     if (updatedContent !== content) {
       // Write back to sandbox
       await writeFileToSandbox(projectId, 'vite.config.ts', updatedContent);
-      
+
       console.log(`Updated vite.config.ts allowedHosts for project ${projectId}`);
     }
   } catch (error) {
@@ -96,7 +97,9 @@ export async function validateViteConfigOnWrite(projectId: string, path: string,
   let updatedContent = content;
 
   const hasCorrectAllowedHosts = content.includes("allowedHosts: 'all'") || 
-                                  content.includes('allowedHosts: "all"');
+                                  content.includes('allowedHosts: "all"') ||
+                                  content.includes("allowedHosts: ['all', '.e2b.dev']") ||
+                                  content.includes('allowedHosts: ["all", ".e2b.dev"]');
 
   if (!hasCorrectAllowedHosts) {
     // Apply the same fixes as ensureViteConfigAllowedHosts
@@ -104,24 +107,24 @@ export async function validateViteConfigOnWrite(projectId: string, path: string,
       if (content.includes('allowedHosts:')) {
         updatedContent = content.replace(
           /allowedHosts:\s*(?:true|false|['"][^'"]*['"]|\[.*?\])/,
-          "allowedHosts: 'all'"
+          "allowedHosts: ['all', '.e2b.dev']"
         );
       } else {
         updatedContent = content.replace(
           /server:\s*{/,
-          "server: {\n    allowedHosts: 'all',"
+          "server: {\n    allowedHosts: ['all', '.e2b.dev'],"
         );
       }
     } else {
       if (content.includes('export default defineConfig({')) {
         updatedContent = content.replace(
           /export default defineConfig\({/,
-          `export default defineConfig({\n  server: {\n    host: '0.0.0.0',\n    port: 3000,\n    allowedHosts: 'all'\n  },`
+          `export default defineConfig({\n  server: {\n    host: '0.0.0.0',\n    port: 3000,\n    allowedHosts: ['all', '.e2b.dev']\n  },`
         );
       } else if (content.includes('export default {')) {
         updatedContent = content.replace(
           /export default {/,
-          `export default {\n  server: {\n    host: '0.0.0.0',\n    port: 3000,\n    allowedHosts: 'all'\n  },`
+          `export default {\n  server: {\n    host: '0.0.0.0',\n    port: 3000,\n    allowedHosts: ['all', '.e2b.dev']\n  },`
         );
       }
     }

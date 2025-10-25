@@ -7,7 +7,7 @@ export default defineConfig({
   server: {
     host: '0.0.0.0',
     port: 3000,
-    allowedHosts: ['all', '.e2b.dev'],
+    allowedHosts: ['all', '.e2b.dev'], // Sandbox URL will be added dynamically
   },
   resolve: {
     alias: {

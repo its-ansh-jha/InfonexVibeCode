@@ -3,10 +3,10 @@ import { storage } from '../storage';
 import { readFileFromSandbox, writeFileToSandbox } from './e2b';
 
 /**
- * Checks if vite.config.ts exists and ensures server.allowedHosts is set to 'all'
+ * Checks if vite.config.ts exists and ensures server.allowedHosts includes both 'all' and the sandbox preview URL
  * This ensures the preview URL works correctly for all domains
  */
-export async function ensureViteConfigAllowedHosts(projectId: string): Promise<void> {
+export async function ensureViteConfigAllowedHosts(projectId: string, sandboxUrl?: string): Promise<void> {
   try {
     // Check if vite.config.ts exists in the database
     const viteConfigFile = await storage.getFileByPath(projectId, 'vite.config.ts');
@@ -25,11 +25,24 @@ export async function ensureViteConfigAllowedHosts(projectId: string): Promise<v
       return;
     }
 
+    // Build the allowedHosts array
+    const allowedHosts = ['all', '.e2b.dev'];
+    if (sandboxUrl) {
+      try {
+        const url = new URL(sandboxUrl);
+        const hostname = url.hostname;
+        if (!allowedHosts.includes(hostname)) {
+          allowedHosts.push(hostname);
+        }
+      } catch (error) {
+        console.error('Failed to parse sandbox URL:', error);
+      }
+    }
+
+    const allowedHostsStr = JSON.stringify(allowedHosts);
+    
     // Check if allowedHosts is already set correctly
-    const hasCorrectAllowedHosts = content.includes("allowedHosts: 'all'") || 
-                                    content.includes('allowedHosts: "all"') ||
-                                    content.includes("allowedHosts: ['all', '.e2b.dev']") ||
-                                    content.includes('allowedHosts: ["all", ".e2b.dev"]');
+    const hasCorrectAllowedHosts = content.includes(`allowedHosts: ${allowedHostsStr}`);
 
     if (hasCorrectAllowedHosts) {
       // Already configured correctly
@@ -46,13 +59,13 @@ export async function ensureViteConfigAllowedHosts(projectId: string): Promise<v
         // Replace existing allowedHosts value
         updatedContent = content.replace(
           /allowedHosts:\s*(?:true|false|['"][^'"]*['"]|\[.*?\])/,
-          "allowedHosts: ['all', '.e2b.dev']"
+          `allowedHosts: ${allowedHostsStr}`
         );
       } else {
         // Add allowedHosts to existing server config
         updatedContent = content.replace(
           /server:\s*{/,
-          "server: {\n    allowedHosts: ['all', '.e2b.dev'],"
+          `server: {\n    allowedHosts: ${allowedHostsStr},`
         );
       }
     } else {
@@ -61,12 +74,12 @@ export async function ensureViteConfigAllowedHosts(projectId: string): Promise<v
       if (content.includes('export default defineConfig({')) {
         updatedContent = content.replace(
           /export default defineConfig\({/,
-          `export default defineConfig({\n  server: {\n    host: '0.0.0.0',\n    port: 3000,\n    allowedHosts: ['all', '.e2b.dev']\n  },`
+          `export default defineConfig({\n  server: {\n    host: '0.0.0.0',\n    port: 3000,\n    allowedHosts: ${allowedHostsStr}\n  },`
         );
       } else if (content.includes('export default {')) {
         updatedContent = content.replace(
           /export default {/,
-          `export default {\n  server: {\n    host: '0.0.0.0',\n    port: 3000,\n    allowedHosts: ['all', '.e2b.dev']\n  },`
+          `export default {\n  server: {\n    host: '0.0.0.0',\n    port: 3000,\n    allowedHosts: ${allowedHostsStr}\n  },`
         );
       }
     }
@@ -76,7 +89,7 @@ export async function ensureViteConfigAllowedHosts(projectId: string): Promise<v
       // Write back to sandbox
       await writeFileToSandbox(projectId, 'vite.config.ts', updatedContent);
 
-      console.log(`Updated vite.config.ts allowedHosts for project ${projectId}`);
+      console.log(`Updated vite.config.ts allowedHosts for project ${projectId} with hosts: ${allowedHostsStr}`);
     }
   } catch (error) {
     console.error(`Error ensuring vite.config.ts allowedHosts for project ${projectId}:`, error);
@@ -88,18 +101,31 @@ export async function ensureViteConfigAllowedHosts(projectId: string): Promise<v
  * Validates vite.config.ts when a file is created or updated
  * Call this after write_file operations for vite.config.ts
  */
-export async function validateViteConfigOnWrite(projectId: string, path: string, content: string): Promise<string> {
+export async function validateViteConfigOnWrite(projectId: string, path: string, content: string, sandboxUrl?: string): Promise<string> {
   if (path !== 'vite.config.ts') {
     return content;
   }
 
+  // Build the allowedHosts array
+  const allowedHosts = ['all', '.e2b.dev'];
+  if (sandboxUrl) {
+    try {
+      const url = new URL(sandboxUrl);
+      const hostname = url.hostname;
+      if (!allowedHosts.includes(hostname)) {
+        allowedHosts.push(hostname);
+      }
+    } catch (error) {
+      console.error('Failed to parse sandbox URL:', error);
+    }
+  }
+
+  const allowedHostsStr = JSON.stringify(allowedHosts);
+
   // Ensure the configuration has the correct allowedHosts setting
   let updatedContent = content;
 
-  const hasCorrectAllowedHosts = content.includes("allowedHosts: 'all'") || 
-                                  content.includes('allowedHosts: "all"') ||
-                                  content.includes("allowedHosts: ['all', '.e2b.dev']") ||
-                                  content.includes('allowedHosts: ["all", ".e2b.dev"]');
+  const hasCorrectAllowedHosts = content.includes(`allowedHosts: ${allowedHostsStr}`);
 
   if (!hasCorrectAllowedHosts) {
     // Apply the same fixes as ensureViteConfigAllowedHosts
@@ -107,24 +133,24 @@ export async function validateViteConfigOnWrite(projectId: string, path: string,
       if (content.includes('allowedHosts:')) {
         updatedContent = content.replace(
           /allowedHosts:\s*(?:true|false|['"][^'"]*['"]|\[.*?\])/,
-          "allowedHosts: ['all', '.e2b.dev']"
+          `allowedHosts: ${allowedHostsStr}`
         );
       } else {
         updatedContent = content.replace(
           /server:\s*{/,
-          "server: {\n    allowedHosts: ['all', '.e2b.dev'],"
+          `server: {\n    allowedHosts: ${allowedHostsStr},`
         );
       }
     } else {
       if (content.includes('export default defineConfig({')) {
         updatedContent = content.replace(
           /export default defineConfig\({/,
-          `export default defineConfig({\n  server: {\n    host: '0.0.0.0',\n    port: 3000,\n    allowedHosts: ['all', '.e2b.dev']\n  },`
+          `export default defineConfig({\n  server: {\n    host: '0.0.0.0',\n    port: 3000,\n    allowedHosts: ${allowedHostsStr}\n  },`
         );
       } else if (content.includes('export default {')) {
         updatedContent = content.replace(
           /export default {/,
-          `export default {\n  server: {\n    host: '0.0.0.0',\n    port: 3000,\n    allowedHosts: ['all', '.e2b.dev']\n  },`
+          `export default {\n  server: {\n    host: '0.0.0.0',\n    port: 3000,\n    allowedHosts: ${allowedHostsStr}\n  },`
         );
       }
     }

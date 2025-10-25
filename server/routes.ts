@@ -115,6 +115,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.post("/api/projects/:id/boilerplate", requireAuth, async (req: Request, res) => {
+    try {
+      if (!(await checkProjectOwnership(req.params.id, req.userId!))) {
+        return res.status(403).json({ error: "Forbidden: Access denied" });
+      }
+
+      const { type } = req.body;
+      
+      if (!['react-vite', 'node-express'].includes(type)) {
+        return res.status(400).json({ error: "Invalid boilerplate type" });
+      }
+
+      const { createBoilerplateProject } = await import('./lib/boilerplate');
+      await createBoilerplateProject(req.params.id, type as 'react-vite' | 'node-express');
+      
+      res.json({ success: true, message: `${type} boilerplate created successfully` });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
   // Files - CRUD
   app.get("/api/files/:projectId", requireAuth, async (req: Request, res) => {
     try {

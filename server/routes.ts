@@ -17,6 +17,7 @@ import {
   getSandboxStatus,
   checkSandboxPort
 } from "./lib/e2b";
+import { ensureViteConfigAllowedHosts, validateViteConfigOnWrite } from "./lib/viteConfigSync";
 
 async function checkProjectOwnership(projectId: string, userId: string): Promise<boolean> {
   const project = await storage.getProject(projectId);
@@ -242,7 +243,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Delete from database
       await storage.deleteFile(req.params.fileId);
-      
+
       res.json({ 
         success: true, 
         deleted: { 
@@ -385,7 +386,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const project = await storage.getProject(req.params.projectId);
-      
+
       if (!project?.workflowCommand) {
         return res.status(400).json({ error: "No workflow command configured" });
       }
@@ -408,7 +409,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/upload/image", requireAuth, async (req: any, res) => {
     try {
       const multer = (await import("multer")).default;
-      
+
       // Configure multer with file size limit (5MB) and file filter
       const upload = multer({ 
         storage: multer.memoryStorage(),
@@ -425,7 +426,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           }
         }
       });
-      
+
       upload.single('file')(req, res, async (err: any) => {
         if (err) {
           if (err.code === 'LIMIT_FILE_SIZE') {
@@ -433,30 +434,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
           }
           return res.status(400).json({ error: err.message });
         }
-        
+
         const file = req.file;
         const projectId = req.body.projectId;
-        
+
         if (!file) {
           return res.status(400).json({ error: "No file uploaded" });
         }
-        
+
         if (!(await checkProjectOwnership(projectId, req.userId!))) {
           return res.status(403).json({ error: "Forbidden: Access denied" });
         }
-        
+
         // Generate unique filename with safe extension
         const timestamp = Date.now();
         const sanitizedOriginalName = file.originalname.replace(/[^a-zA-Z0-9.-]/g, '_');
         const filename = `${timestamp}-${sanitizedOriginalName}`;
         const path = `attachments/${filename}`;
-        
+
         // Upload to S3
         const s3Key = await uploadFileToS3(projectId, path, file.buffer.toString('base64'));
-        
+
         // Get public URL (you may need to adjust based on your S3 configuration)
         const url = `https://s3.amazonaws.com/${process.env.S3_BUCKET_NAME}/${s3Key}`;
-        
+
         res.json({ url, path, s3Key });
       });
     } catch (error: any) {
@@ -574,27 +575,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
             // Execute tool calls
             try {
               if (toolName === 'write_file') {
-                const { path, content: fileContent } = args;
+                const { path, content } = args;
+
+                // Validate and fix vite.config.ts if needed
+                const finalContent = await validateViteConfigOnWrite(projectId, path, content);
 
                 // Upload to S3
-                const s3Key = await uploadFileToS3(projectId, path, fileContent);
+                const s3Key = await uploadFileToS3(projectId, path, finalContent);
 
                 // Write to E2B sandbox
-                await writeFileToSandbox(projectId, path, fileContent);
+                await writeFileToSandbox(projectId, path, finalContent);
 
                 // Save to database
                 const existingFile = await storage.getFileByPath(projectId, path);
                 if (existingFile) {
                   await storage.updateFile(existingFile.id, {
                     s3Key,
-                    size: Buffer.byteLength(fileContent, 'utf-8'),
+                    size: Buffer.byteLength(finalContent, 'utf-8'),
                   });
                 } else {
                   await storage.createFile({
                     projectId,
                     path,
                     s3Key,
-                    size: Buffer.byteLength(fileContent, 'utf-8'),
+                    size: Buffer.byteLength(finalContent, 'utf-8'),
                   });
                 }
 
@@ -604,22 +608,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
                   res.write(`data: ${JSON.stringify({ type: 'tool', name: toolName, summary })}\n\n`);
                 }
               } else if (toolName === 'edit_file') {
-                const { path, content: fileContent } = args;
+                const { path, old_str, new_str } = args;
+
+                // Get existing file
+                const existingFile = await storage.getFileByPath(projectId, path);
+                if (!existingFile) {
+                  throw new Error(`File not found: ${path}`);
+                }
+
+                // Get current content from S3
+                const currentContent = await getFileFromS3(existingFile.s3Key);
+
+                // Apply edit
+                let fileContent = currentContent.replace(old_str, new_str);
+
+                // Validate and fix vite.config.ts if needed
+                fileContent = await validateViteConfigOnWrite(projectId, path, fileContent);
 
                 // Upload to S3
                 const s3Key = await uploadFileToS3(projectId, path, fileContent);
 
                 // Write to E2B sandbox
                 await writeFileToSandbox(projectId, path, fileContent);
-
-                // Update database
-                const existingFile = await storage.getFileByPath(projectId, path);
-                if (existingFile) {
-                  await storage.updateFile(existingFile.id, {
-                    s3Key,
-                    size: Buffer.byteLength(fileContent, 'utf-8'),
-                  });
-                }
                 
                 const summary = `Edited ${path}`;
                 toolCalls.push({ name: toolName, arguments: args, summary });
@@ -632,10 +642,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
                 let deletionStatus = { s3: false, sandbox: false, database: false };
                 let summary = `Deleted ${path}`;
                 const errors: string[] = [];
-                
+
                 // Find file in database
                 const existingFile = await storage.getFileByPath(projectId, path);
-                
+
                 if (existingFile) {
                   // Delete from S3
                   try {
@@ -645,7 +655,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
                     console.error('Failed to delete file from S3:', error);
                     errors.push(`S3: ${error.message}`);
                   }
-                  
+
                   // Delete from E2B sandbox
                   const sandboxDeletion = await deleteFileFromSandbox(projectId, path);
                   deletionStatus.sandbox = sandboxDeletion.success;
@@ -653,7 +663,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
                     console.error('Failed to delete file from sandbox:', sandboxDeletion.error);
                     errors.push(`Sandbox: ${sandboxDeletion.error}`);
                   }
-                  
+
                   // Delete from database - only if at least one of the above succeeded
                   if (deletionStatus.s3 || deletionStatus.sandbox) {
                     try {
@@ -664,7 +674,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
                       errors.push(`Database: ${error.message}`);
                     }
                   }
-                  
+
                   // Update summary based on results
                   if (errors.length > 0) {
                     summary = `Partially deleted ${path} (${errors.join(', ')})`;
@@ -672,7 +682,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
                 } else {
                   summary = `File ${path} not found in database`;
                 }
-                
+
                 toolCalls.push({ name: toolName, arguments: args, summary, result: deletionStatus });
                 if (clientConnected) {
                   res.write(`data: ${JSON.stringify({ type: 'tool', name: toolName, summary })}\n\n`);
@@ -738,7 +748,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
                 }
               } else if (toolName === 'configure_workflow') {
                 const { command } = args;
-                
+
                 // Save workflow command for auto-restart
                 await storage.updateProject(projectId, {
                   workflowCommand: command

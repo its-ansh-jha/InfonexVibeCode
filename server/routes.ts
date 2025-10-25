@@ -600,6 +600,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
             const { name: toolName, arguments: args } = chunk.data;
             let toolResult: any = null;
 
+            // Send tool_start event to show loading state
+            const startSummary = getToolCallSummary(toolName, args);
+            if (clientConnected) {
+              res.write(`data: ${JSON.stringify({ type: 'tool_start', name: toolName, summary: startSummary })}\n\n`);
+            }
+
             // Execute tool calls
             try {
               if (toolName === 'write_file') {
@@ -633,7 +639,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
                 const summary = `Created ${path}`;
                 toolCalls.push({ name: toolName, arguments: args, summary });
                 if (clientConnected) {
-                  res.write(`data: ${JSON.stringify({ type: 'tool', name: toolName, summary })}\n\n`);
+                  res.write(`data: ${JSON.stringify({ type: 'tool_complete', name: toolName, summary })}\n\n`);
                 }
               } else if (toolName === 'edit_file') {
                 const { path, old_str, new_str } = args;
@@ -662,7 +668,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
                 const summary = `Edited ${path}`;
                 toolCalls.push({ name: toolName, arguments: args, summary });
                 if (clientConnected) {
-                  res.write(`data: ${JSON.stringify({ type: 'tool', name: toolName, summary })}\n\n`);
+                  res.write(`data: ${JSON.stringify({ type: 'tool_complete', name: toolName, summary })}\n\n`);
                 }
               } else if (toolName === 'delete_file') {
                 const { path } = args;
@@ -713,7 +719,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
                 toolCalls.push({ name: toolName, arguments: args, summary, result: deletionStatus });
                 if (clientConnected) {
-                  res.write(`data: ${JSON.stringify({ type: 'tool', name: toolName, summary })}\n\n`);
+                  res.write(`data: ${JSON.stringify({ type: 'tool_complete', name: toolName, summary })}\n\n`);
                 }
               } else if (toolName === 'list_files') {
                 // List all files in the project
@@ -727,7 +733,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
                 const summary = `Listed ${files.length} files`;
                 toolCalls.push({ name: toolName, arguments: args, summary, result: fileList });
                 if (clientConnected) {
-                  res.write(`data: ${JSON.stringify({ type: 'tool', name: toolName, summary })}\n\n`);
+                  res.write(`data: ${JSON.stringify({ type: 'tool_complete', name: toolName, summary })}\n\n`);
                 }
               } else if (toolName === 'read_file') {
                 const { path } = args;
@@ -744,7 +750,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
                 const summary = `Read ${path} (${content.length} characters)`;
                 toolCalls.push({ name: toolName, arguments: args, summary, result: { content, path } });
                 if (clientConnected) {
-                  res.write(`data: ${JSON.stringify({ type: 'tool', name: toolName, summary })}\n\n`);
+                  res.write(`data: ${JSON.stringify({ type: 'tool_complete', name: toolName, summary })}\n\n`);
                 }
               } else if (toolName === 'run_shell') {
                 const { command } = args;
@@ -776,7 +782,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
                     exitCode: 0
                   }});
                   if (clientConnected) {
-                    res.write(`data: ${JSON.stringify({ type: 'tool', name: toolName, summary })}\n\n`);
+                    res.write(`data: ${JSON.stringify({ type: 'tool_complete', name: toolName, summary })}\n\n`);
                   }
                 } else {
                   // For regular commands, wait for completion with timeout
@@ -794,7 +800,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
                   const summary = `Ran shell: ${command}`;
                   toolCalls.push({ name: toolName, arguments: args, summary, result });
                   if (clientConnected) {
-                    res.write(`data: ${JSON.stringify({ type: 'tool', name: toolName, summary })}\n\n`);
+                    res.write(`data: ${JSON.stringify({ type: 'tool_complete', name: toolName, summary })}\n\n`);
                   }
                 }
               } else if (toolName === 'run_code') {
@@ -803,7 +809,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
                 const summary = `Executed ${language} code`;
                 toolCalls.push({ name: toolName, arguments: args, summary, result });
                 if (clientConnected) {
-                  res.write(`data: ${JSON.stringify({ type: 'tool', name: toolName, summary })}\n\n`);
+                  res.write(`data: ${JSON.stringify({ type: 'tool_complete', name: toolName, summary })}\n\n`);
                 }
               } else if (toolName === 'configure_workflow') {
                 const { command } = args;
@@ -819,7 +825,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
                   message: 'Workflow command saved. Will auto-run on sandbox restart and available via manual run button.'
                 }});
                 if (clientConnected) {
-                  res.write(`data: ${JSON.stringify({ type: 'tool', name: toolName, summary })}\n\n`);
+                  res.write(`data: ${JSON.stringify({ type: 'tool_complete', name: toolName, summary })}\n\n`);
                 }
               }
             } catch (toolError: any) {

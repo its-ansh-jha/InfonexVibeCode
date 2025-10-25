@@ -20,6 +20,7 @@ interface ToolCall {
   summary?: string;
   arguments?: any;
   result?: any;
+  status?: 'in_progress' | 'completed';
 }
 
 interface Action {
@@ -426,13 +427,29 @@ export default function ChatPage() {
               // Update all actions to completed status
               const completedActions: Action[] = data.actions;
               setStreamingActions(completedActions);
-            } else if (data.type === 'tool') {
+            } else if (data.type === 'tool_start') {
               const toolCall: ToolCall = {
                 name: data.name,
                 summary: data.summary,
-                result: data.result,
+                status: 'in_progress',
               };
               tools.push(toolCall);
+              setStreamingTools([...tools]);
+            } else if (data.type === 'tool_complete') {
+              // Find the in-progress tool and mark it as completed
+              const toolIndex = tools.findIndex(t => t.name === data.name && t.status === 'in_progress');
+              if (toolIndex !== -1) {
+                tools[toolIndex].status = 'completed';
+                tools[toolIndex].result = data.result;
+              } else {
+                // If not found, add it as completed (fallback)
+                tools.push({
+                  name: data.name,
+                  summary: data.summary,
+                  result: data.result,
+                  status: 'completed',
+                });
+              }
               setStreamingTools([...tools]);
             } else if (data.type === 'error') {
               toast({
@@ -587,17 +604,29 @@ export default function ChatPage() {
                     </Card>
                     {toolCalls && toolCalls.length > 0 && (
                       <div className="flex flex-wrap gap-1.5 sm:gap-2">
-                        {toolCalls.map((tool, idx) => (
-                          <Badge 
-                            key={idx} 
-                            variant={getToolVariant(tool.name)} 
-                            className="gap-1.5 text-[10px] sm:text-xs py-1 px-2"
-                          >
-                            {getToolIcon(tool.name)}
-                            <span className="truncate max-w-[120px] sm:max-w-none">{tool.summary || tool.name}</span>
-                            <Check className="h-2.5 w-2.5 sm:h-3 sm:w-3 text-chart-2" />
-                          </Badge>
-                        ))}
+                        {toolCalls.map((tool, idx) => {
+                          const isLongRunning = tool.name === 'run_shell' && 
+                            (tool.summary?.includes('npm run dev') || 
+                             tool.summary?.includes('npm start') ||
+                             tool.summary?.includes('Started:'));
+                          const showLoading = tool.status === 'in_progress' && !isLongRunning;
+                          
+                          return (
+                            <Badge 
+                              key={idx} 
+                              variant={getToolVariant(tool.name)} 
+                              className="gap-1.5 text-[10px] sm:text-xs py-1 px-2"
+                            >
+                              {getToolIcon(tool.name)}
+                              <span className="truncate max-w-[120px] sm:max-w-none">{tool.summary || tool.name}</span>
+                              {showLoading ? (
+                                <Loader2 className="h-2.5 w-2.5 sm:h-3 sm:w-3 text-blue-500 animate-spin" />
+                              ) : (
+                                <Check className="h-2.5 w-2.5 sm:h-3 sm:w-3 text-chart-2" />
+                              )}
+                            </Badge>
+                          );
+                        })}
                       </div>
                     )}
                     <p className="text-[10px] sm:text-xs text-muted-foreground px-1">

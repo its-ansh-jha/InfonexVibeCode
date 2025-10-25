@@ -177,6 +177,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const files = await storage.getFilesByProjectId(req.params.projectId);
       const project = await storage.getProject(req.params.projectId);
 
+      if (!files || files.length === 0) {
+        return res.status(404).json({ error: "No files found" });
+      }
+
       // Create JSON structure of all files
       const fileContents: Record<string, string> = {};
       for (const file of files) {
@@ -194,10 +198,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         exportedAt: new Date().toISOString(),
       };
 
-      res.setHeader('Content-Type', 'application/json');
-      res.setHeader('Content-Disposition', `attachment; filename="${project?.name || 'project'}-source.json"`);
       res.json(downloadData);
     } catch (error: any) {
+      console.error('Download error:', error);
       res.status(500).json({ error: error.message });
     }
   });

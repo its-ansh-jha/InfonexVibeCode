@@ -135,17 +135,37 @@ export async function createBoilerplateProject(
   const files = await getBoilerplateTemplate(type);
   
   for (const file of files) {
-    const s3Key = await uploadFileToS3(projectId, file.path, file.content);
-    await writeFileToSandbox(projectId, file.path, file.content);
-    
-    const existingFile = await storage.getFileByPath(projectId, file.path);
-    if (!existingFile) {
-      await storage.createFile({
-        projectId,
-        path: file.path,
-        s3Key,
-        size: Buffer.byteLength(file.content, 'utf-8'),
-      });
+    try {
+      // Upload to S3
+      const s3Key = await uploadFileToS3(projectId, file.path, file.content);
+      
+      // Write to E2B sandbox
+      await writeFileToSandbox(projectId, file.path, file.content);
+      
+      // Check if file already exists in database
+      const existingFile = await storage.getFileByPath(projectId, file.path);
+      if (existingFile) {
+        // Update existing file
+        await storage.updateFile(existingFile.id, {
+          s3Key,
+          size: Buffer.byteLength(file.content, 'utf-8'),
+        });
+      } else {
+        // Create new file
+        await storage.createFile({
+          projectId,
+          path: file.path,
+          s3Key,
+          size: Buffer.byteLength(file.content, 'utf-8'),
+        });
+      }
+      
+      console.log(`Created boilerplate file: ${file.path}`);
+    } catch (error) {
+      console.error(`Failed to create boilerplate file ${file.path}:`, error);
+      throw error;
     }
   }
+  
+  console.log(`Boilerplate ${type} created successfully with ${files.length} files`);
 }

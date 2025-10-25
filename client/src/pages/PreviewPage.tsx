@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { useParams } from "wouter";
-import { Copy, Download, ExternalLink, Loader2, RefreshCw, AlertCircle, Maximize2, Minimize2, Play } from "lucide-react";
+import { Copy, Download, ExternalLink, Loader2, RefreshCw, Maximize2, Minimize2, Play } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
@@ -265,25 +265,23 @@ export default function PreviewPage() {
               </div>
 
               <div className="flex items-center gap-0.5 sm:gap-1 shrink-0">
-                {sandboxExpired && (
-                  <Button
-                    variant="destructive"
-                    size="sm"
-                    onClick={handleRecreateSandbox}
-                    disabled={isRecreating}
-                    className="h-7 w-7 p-0"
-                    title="Recreate sandbox"
-                    data-testid="button-recreate-sandbox"
-                  >
-                    {isRecreating ? (
-                      <Loader2 className="h-3 w-3 animate-spin" />
-                    ) : (
-                      <AlertCircle className="h-3 w-3" />
-                    )}
-                  </Button>
-                )}
+                <Button
+                  variant={sandboxExpired ? "destructive" : "ghost"}
+                  size="sm"
+                  onClick={handleRecreateSandbox}
+                  disabled={isRecreating}
+                  className="h-7 w-7 p-0"
+                  title="Recreate sandbox"
+                  data-testid="button-recreate-sandbox"
+                >
+                  {isRecreating ? (
+                    <Loader2 className="h-3 w-3 animate-spin" />
+                  ) : (
+                    <RefreshCw className="h-3 w-3" />
+                  )}
+                </Button>
 
-                {project?.workflowCommand && !sandboxExpired && (
+                {project?.workflowCommand && (
                   <Button
                     variant="default"
                     size="sm"

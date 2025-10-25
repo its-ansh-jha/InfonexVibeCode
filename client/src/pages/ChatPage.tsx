@@ -518,6 +518,7 @@ export default function ChatPage() {
   };
 
   const getToolIcon = (toolName: string) => {
+    if (toolName === 'create_boilerplate') return <Sparkles className="h-3 w-3" />;
     if (toolName === 'write_file' || toolName === 'edit_file') return <FileCode className="h-3 w-3" />;
     if (toolName === 'run_shell') return <Terminal className="h-3 w-3" />;
     if (toolName === 'run_code') return <Play className="h-3 w-3" />;
@@ -525,6 +526,7 @@ export default function ChatPage() {
   };
 
   const getToolVariant = (toolName: string): "default" | "secondary" | "destructive" | "outline" => {
+    if (toolName === 'create_boilerplate') return 'default';
     if (toolName === 'write_file' || toolName === 'edit_file') return 'default';
     if (toolName === 'run_shell') return 'secondary';
     return 'outline';

@@ -13,9 +13,12 @@ Vibe Code is an AI-powered app building platform that allows users to create app
 - **AWS S3 Storage**: Secure file storage for all project files
 - **E2B Sandbox Integration**: Real-time code execution and preview in isolated sandboxes
 - **Advanced AI Tools**:
+  - `create_boilerplate`: Create complete boilerplate project structures (React+Vite with properly configured vite.config.ts)
   - `write_file`: Create or update files (saved to S3 and E2B sandbox)
   - `edit_file`: Edit specific parts of existing files
   - `delete_file`: Delete files from S3, E2B sandbox, and database with accurate status reporting
+  - `list_files`: List all files in the current project (searches S3 storage)
+  - `read_file`: Read the content of any file from S3 or E2B sandbox
   - `run_shell`: Execute shell commands with support for long-running processes (servers, npm run dev)
   - `run_code`: Run Python/JavaScript code in E2B code interpreter
   - `serper_web_search`: Proactive web search during operations for documentation and best practices
@@ -61,6 +64,7 @@ Vibe Code is an AI-powered app building platform that allows users to create app
 - `GET /api/projects`: List user's projects
 - `GET /api/projects/:id`: Get project details
 - `POST /api/projects`: Create new project (auto-creates E2B sandbox)
+- `POST /api/projects/:id/boilerplate`: Create boilerplate templates (react-vite, node-express)
 - `DELETE /api/projects/:id`: Delete project and cleanup S3/E2B resources
 
 ### Files
@@ -113,7 +117,23 @@ Vibe Code is an AI-powered app building platform that allows users to create app
 - **Interactions**: Subtle hover elevations, smooth transitions
 
 ## Recent Changes
-- **October 24, 2025** (Latest Session): Real-Time Action Tracking System
+- **October 25, 2025** (Latest Session): Enhanced AI Capabilities & Command Tracking
+  - **Boilerplate Creation Tool**: AI can now create complete project structures with one command
+    - `create_boilerplate` tool for React+Vite projects with properly configured vite.config.ts
+    - Includes all necessary files: package.json, vite.config.ts, index.html, src/main.tsx, src/App.tsx, TypeScript configs
+    - Fixes the vite allowedHosts configuration issue automatically
+  - **File Management Tools**: AI can now browse and read existing files
+    - `list_files` tool to see all files in a project
+    - `read_file` tool to read any file content from S3 or E2B sandbox
+    - AI is now fully aware of existing project structure before making changes
+  - **Enhanced Command Execution UI**: Real-time loading states for all commands
+    - Loading spinner (🔄) shows while commands are executing
+    - Green checkmark (✓) appears when commands complete
+    - Smart handling for long-running commands (npm run dev shows checkmark immediately)
+    - Users can now see exactly when commands finish vs when they're still running
+  - **MCP Server Integration**: Added Model Context Protocol server for potential future integrations
+  
+- **October 24, 2025**: Real-Time Action Tracking System
   - **Live Progress Indicators**: AI now shows real-time progress indicators as it works
   - **Action Streaming**: Actions like "Installing dependencies", "Configured Start application", etc. display in real-time
   - **Visual Feedback**: Each action shows with contextual icons (package, file, terminal, settings, etc.)

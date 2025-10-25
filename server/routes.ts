@@ -608,7 +608,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
             // Execute tool calls
             try {
-              if (toolName === 'write_file') {
+              if (toolName === 'create_boilerplate') {
+                const { type } = args;
+                
+                if (!['react-vite', 'node-express'].includes(type)) {
+                  throw new Error(`Invalid boilerplate type: ${type}`);
+                }
+
+                const { createBoilerplateProject } = await import('./lib/boilerplate');
+                await createBoilerplateProject(projectId, type as 'react-vite' | 'node-express');
+                
+                const summary = `Created ${type} boilerplate`;
+                toolCalls.push({ name: toolName, arguments: args, summary });
+                if (clientConnected) {
+                  res.write(`data: ${JSON.stringify({ type: 'tool_complete', name: toolName, summary })}\n\n`);
+                }
+              } else if (toolName === 'write_file') {
                 const { path, content } = args;
 
                 // Validate and fix vite.config.ts if needed

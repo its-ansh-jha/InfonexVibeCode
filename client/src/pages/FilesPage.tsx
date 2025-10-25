@@ -58,35 +58,41 @@ export default function FilesPage() {
   }
 
   return (
-    <div className="p-3 sm:p-4 md:p-8 space-y-4 sm:space-y-6 pb-28 md:pb-8">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4">
-        <div className="flex-1 min-w-0">
-          <h1 className="text-2xl sm:text-3xl font-semibold truncate">Files</h1>
-          <p className="text-sm sm:text-base text-muted-foreground mt-1">
-            Stored in S3 and synced with E2B sandbox
-          </p>
+    <div className="flex flex-col h-full bg-background dark:bg-background">
+      {/* Header - consistent with other pages */}
+      <div className="border-b border-border dark:border-border p-3 md:p-4">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <FileText className="h-4 w-4 md:h-5 md:w-5 text-muted-foreground" />
+            <h1 className="text-base md:text-lg font-semibold">Files</h1>
+          </div>
+          <Badge variant="outline" className="shrink-0 text-[10px] sm:text-xs">
+            {files?.length || 0} files
+          </Badge>
         </div>
-        <Badge variant="outline" className="self-start sm:self-auto shrink-0">
-          {files?.length || 0} files
-        </Badge>
+        <p className="text-xs sm:text-sm text-muted-foreground mt-1 ml-7">
+          Stored in S3 and synced with E2B sandbox
+        </p>
       </div>
+      
+      {/* Content Area */}
+      <div className="flex-1 overflow-y-auto p-3 sm:p-4 md:p-6 space-y-4 sm:space-y-6 pb-28 md:pb-6">
 
       {/* Search Bar */}
-      {files && files.length > 0 && (
-        <div className="relative">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input
-            placeholder="Search files..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-10"
-            data-testid="input-search-files"
-          />
-        </div>
-      )}
+        {files && files.length > 0 && (
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Search files..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-10"
+              data-testid="input-search-files"
+            />
+          </div>
+        )}
 
-      <Card>
+        <Card>
         <CardHeader className="pb-3 sm:pb-6">
           <CardTitle className="flex items-center gap-2 text-lg sm:text-xl">
             <Folder className="h-5 w-5" />
@@ -146,6 +152,7 @@ export default function FilesPage() {
           )}
         </CardContent>
       </Card>
+      </div>
     </div>
   );
 }

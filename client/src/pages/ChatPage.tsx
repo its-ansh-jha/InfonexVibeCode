@@ -523,6 +523,14 @@ export default function ChatPage() {
 
   return (
     <div className="flex flex-col h-full overflow-hidden bg-background dark:bg-background">
+      {/* Header - visible on all devices */}
+      <div className="border-b border-border dark:border-border p-3 md:p-4">
+        <div className="flex items-center gap-2">
+          <MessageSquare className="h-4 w-4 md:h-5 md:w-5 text-muted-foreground" />
+          <h1 className="text-base md:text-lg font-semibold">Chat with Agent</h1>
+        </div>
+      </div>
+      
       {/* Messages Area */}
       <div className="flex-1 overflow-y-auto overflow-x-hidden p-3 sm:p-4 md:p-6 space-y-4 sm:space-y-6 pb-32 md:pb-6">
         {messages && messages.length === 0 && !streamingMessage ? (

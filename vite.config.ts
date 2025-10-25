@@ -32,6 +32,9 @@ export default defineConfig({
     emptyOutDir: true,
   },
   server: {
+    host: '0.0.0.0',
+    port: 5000,
+    allowedHosts: ['all', '.e2b.dev'], // Allow connections from all hosts and E2B sandboxes
     fs: {
       strict: true,
       deny: ["**/.*"],

@@ -17,7 +17,6 @@ import {
   getSandboxStatus,
   checkSandboxPort
 } from "./lib/e2b";
-import { ensureViteConfigAllowedHosts, validateViteConfigOnWrite } from "./lib/viteConfigSync";
 
 async function checkProjectOwnership(projectId: string, userId: string): Promise<boolean> {
   const project = await storage.getProject(projectId);
@@ -320,8 +319,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const project = await storage.getProject(req.params.projectId);
 
       if (project?.sandboxUrl && project?.sandboxId) {
-        // Check and fix vite.config.ts if needed
-        await ensureViteConfigAllowedHosts(req.params.projectId);
         res.json({ url: project.sandboxUrl });
       } else {
         const sandboxInfo = await createSandbox(req.params.projectId);
@@ -329,8 +326,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
           sandboxId: sandboxInfo.sandboxId,
           sandboxUrl: sandboxInfo.url,
         });
-        // Check and fix vite.config.ts if needed
-        await ensureViteConfigAllowedHosts(req.params.projectId);
         res.json({ url: sandboxInfo.url });
       }
     } catch (error: any) {
@@ -365,9 +360,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
           console.error(`Failed to sync file ${file.path} to new sandbox:`, error);
         }
       }
-
-      // Ensure vite.config.ts has correct allowedHosts setting
-      await ensureViteConfigAllowedHosts(req.params.projectId);
 
       // Get project to check for workflow command
       const project = await storage.getProject(req.params.projectId);
@@ -629,28 +621,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
               } else if (toolName === 'write_file') {
                 const { path, content } = args;
 
-                // Validate and fix vite.config.ts if needed
-                const finalContent = await validateViteConfigOnWrite(projectId, path, content);
-
                 // Upload to S3
-                const s3Key = await uploadFileToS3(projectId, path, finalContent);
+                const s3Key = await uploadFileToS3(projectId, path, content);
 
                 // Write to E2B sandbox
-                await writeFileToSandbox(projectId, path, finalContent);
+                await writeFileToSandbox(projectId, path, content);
 
                 // Save to database
                 const existingFile = await storage.getFileByPath(projectId, path);
                 if (existingFile) {
                   await storage.updateFile(existingFile.id, {
                     s3Key,
-                    size: Buffer.byteLength(finalContent, 'utf-8'),
+                    size: Buffer.byteLength(content, 'utf-8'),
                   });
                 } else {
                   await storage.createFile({
                     projectId,
                     path,
                     s3Key,
-                    size: Buffer.byteLength(finalContent, 'utf-8'),
+                    size: Buffer.byteLength(content, 'utf-8'),
                   });
                 }
 
@@ -672,10 +661,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
                 const currentContent = await getFileFromS3(existingFile.s3Key);
 
                 // Apply edit
-                let fileContent = currentContent.replace(old_str, new_str);
-
-                // Validate and fix vite.config.ts if needed
-                fileContent = await validateViteConfigOnWrite(projectId, path, fileContent);
+                const fileContent = currentContent.replace(old_str, new_str);
 
                 // Upload to S3
                 const s3Key = await uploadFileToS3(projectId, path, fileContent);

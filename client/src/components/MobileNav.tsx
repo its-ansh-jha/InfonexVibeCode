@@ -1,10 +1,8 @@
-import { MessageSquare, FolderGit2, Monitor, Play, Terminal } from "lucide-react";
+import { MessageSquare, FolderGit2, Monitor, Terminal } from "lucide-react";
 import { useLocation } from "wouter";
 import { cn } from "@/lib/utils";
-import { auth } from "@/lib/firebase";
 
 const mobileNavItems = [
-  { title: "Run", icon: Play },
   { title: "Preview", url: "/preview", icon: Monitor },
   { title: "Agent", url: "/chat", icon: MessageSquare },
   { title: "Files", url: "/files", icon: FolderGit2 },
@@ -21,24 +19,6 @@ export function MobileNav() {
     return null;
   }
 
-  const handleRunClick = async () => {
-    try {
-      const idToken = await auth.currentUser?.getIdToken();
-      await fetch(`/api/sandbox/${currentProjectId}/run-workflow`, {
-        method: "POST",
-        headers: {
-          "Authorization": `Bearer ${idToken}`,
-        },
-      });
-      // Navigate to preview after triggering run
-      setLocation(`/project/${currentProjectId}/preview`);
-    } catch (error) {
-      console.error('Failed to run workflow:', error);
-      // Still navigate to preview even if run fails
-      setLocation(`/project/${currentProjectId}/preview`);
-    }
-  };
-
   return (
     <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-card dark:bg-card border-t border-border dark:border-border z-50 backdrop-blur-lg bg-opacity-95">
       <div className="flex items-center justify-around h-16 px-2">
@@ -49,12 +29,11 @@ export function MobileNav() {
           return (
             <button
               key={item.title}
-              onClick={() => item.title === "Run" ? handleRunClick() : setLocation(fullUrl)}
+              onClick={() => setLocation(fullUrl)}
               className={cn(
                 "flex flex-col items-center gap-1.5 flex-1 py-2 transition-all rounded-lg",
                 isActive && "bg-muted/50",
                 !isActive && "text-muted-foreground hover:text-foreground",
-                item.title === "Run" && "text-green-600 dark:text-green-500",
                 item.title === "Agent" && "text-purple-600 dark:text-purple-500"
               )}
               data-testid={`mobile-nav-${item.title.toLowerCase()}`}

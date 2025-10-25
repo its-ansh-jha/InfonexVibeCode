@@ -55,7 +55,11 @@ export default function TerminalPage() {
     const fitAddon = new FitAddon();
     term.loadAddon(fitAddon);
     term.open(terminalRef.current);
-    fitAddon.fit();
+    
+    // Delay fit to ensure container is properly sized
+    setTimeout(() => {
+      fitAddon.fit();
+    }, 100);
 
     xtermRef.current = term;
     fitAddonRef.current = fitAddon;
@@ -201,13 +205,14 @@ export default function TerminalPage() {
           </span>
         </div>
       </div>
-      <div className="flex-1 overflow-hidden p-2 pb-20 md:p-4 md:pb-4">
+      <div className="flex-1 overflow-hidden p-2 pb-20 md:p-4 md:pb-4" style={{ maxWidth: "100vw" }}>
         <div
           ref={terminalRef}
-          className="h-full w-full rounded-lg border border-border dark:border-border overflow-hidden"
+          className="h-full w-full rounded-lg border border-border dark:border-border overflow-hidden overflow-x-auto"
           style={{ 
             backgroundColor: "#0a0a0a",
-            maxWidth: "100%"
+            maxWidth: "100%",
+            width: "100%"
           }}
         />
       </div>

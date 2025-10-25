@@ -315,6 +315,21 @@
       overflow-wrap: anywhere;
       hyphens: auto;
     }
+
+    /* Constrain xterm terminal to viewport width */
+    .xterm {
+      max-width: 100vw !important;
+      width: 100% !important;
+    }
+
+    .xterm .xterm-viewport {
+      max-width: 100% !important;
+      overflow-x: auto !important;
+    }
+
+    .xterm .xterm-screen {
+      max-width: 100% !important;
+    }
   }
 
   /* .no-default-hover-elevate/no-default-active-elevate is an escape hatch so consumers of

@@ -521,20 +521,6 @@ export default function ChatPage() {
     );
   }
 
-  const quickActions = [
-    "Check my app for bugs",
-    "Add payment processing",
-    "Add SMS message sending",
-    "Add a database",
-    "Create user authentication",
-    "Add email notifications"
-  ];
-
-  const handleQuickAction = (action: string) => {
-    setInput(action);
-    textareaRef.current?.focus();
-  };
-
   return (
     <div className="flex flex-col h-full overflow-hidden bg-background dark:bg-background">
       {/* Messages Area */}
@@ -547,22 +533,9 @@ export default function ChatPage() {
             <h1 className="text-2xl sm:text-3xl font-semibold mb-3 text-foreground dark:text-foreground">
               New chat with Agent
             </h1>
-            <p className="text-sm sm:text-base text-muted-foreground dark:text-muted-foreground mb-8 max-w-md">
+            <p className="text-sm sm:text-base text-muted-foreground dark:text-muted-foreground">
               Agent can make changes, review its work, and debug itself automatically.
             </p>
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 sm:gap-3 w-full max-w-2xl mb-8">
-              {quickActions.map((action, idx) => (
-                <Button
-                  key={idx}
-                  variant="secondary"
-                  className="text-xs sm:text-sm py-3 sm:py-6 justify-center hover:bg-secondary/80 dark:hover:bg-secondary/80 transition-colors h-auto whitespace-normal"
-                  onClick={() => handleQuickAction(action)}
-                  data-testid={`button-quick-action-${idx}`}
-                >
-                  {action}
-                </Button>
-              ))}
-            </div>
           </div>
         ) : (
           <div className="max-w-4xl mx-auto space-y-4 sm:space-y-6">
@@ -742,16 +715,6 @@ export default function ChatPage() {
                 onChange={handleImageSelect}
                 className="hidden"
               />
-              <Button
-                variant="ghost"
-                size="icon"
-                disabled={isStreaming}
-                className="h-10 w-10 shrink-0 hover:bg-muted"
-                title="Build"
-                data-testid="button-build"
-              >
-                <Wrench className="h-5 w-5" />
-              </Button>
               <Button
                 variant="ghost"
                 size="icon"

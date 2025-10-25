@@ -15,6 +15,7 @@ import ProjectsPage from "@/pages/ProjectsPage";
 import ChatPage from "@/pages/ChatPage";
 import FilesPage from "@/pages/FilesPage";
 import PreviewPage from "@/pages/PreviewPage";
+import TerminalPage from "@/pages/TerminalPage";
 import NotFound from "@/pages/not-found";
 import { Loader2 } from "lucide-react";
 
@@ -63,6 +64,9 @@ function Router() {
       </Route>
       <Route path="/project/:id/preview">
         <ProtectedRoute component={PreviewPage} />
+      </Route>
+      <Route path="/project/:id/terminal">
+        <ProtectedRoute component={TerminalPage} />
       </Route>
       <Route component={NotFound} />
     </Switch>

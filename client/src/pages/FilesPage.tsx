@@ -4,20 +4,61 @@ import { FileText, Folder, Loader2, Code2, File as FileIcon, Download, Search } 
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import { useToast } from "@/hooks/use-toast";
 import { useState } from "react";
 import type { File } from "@shared/schema";
 import { formatDistanceToNow } from "date-fns";
 import { cn } from "@/lib/utils";
+import { auth } from "@/lib/firebase";
 
 export default function FilesPage() {
   const { id: projectId } = useParams();
   const [searchQuery, setSearchQuery] = useState("");
+  const { toast } = useToast();
 
   const { data: files, isLoading } = useQuery<File[]>({
     queryKey: ["/api/files", projectId],
     enabled: !!projectId,
     refetchInterval: 5000, // Refresh every 5 seconds
   });
+
+  const handleDownloadAll = async () => {
+    try {
+      const idToken = await auth.currentUser?.getIdToken();
+      const response = await fetch(`/api/files/${projectId}/download`, {
+        headers: {
+          "Authorization": `Bearer ${idToken}`,
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to download files");
+      }
+
+      const data = await response.json();
+      const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${data.projectName || 'project'}-source.json`;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+
+      toast({
+        title: "Download started",
+        description: "All files are being downloaded",
+      });
+    } catch (error) {
+      toast({
+        title: "Download failed",
+        description: "Failed to download files",
+        variant: "destructive",
+      });
+    }
+  };
 
   const getFileIcon = (path: string) => {
     const ext = path.split('.').pop()?.toLowerCase();
@@ -67,9 +108,23 @@ export default function FilesPage() {
             Stored in S3 and synced with E2B sandbox
           </p>
         </div>
-        <Badge variant="outline" className="self-start sm:self-auto shrink-0">
-          {files?.length || 0} files
-        </Badge>
+        <div className="flex items-center gap-2">
+          <Badge variant="outline" className="shrink-0">
+            {files?.length || 0} files
+          </Badge>
+          {files && files.length > 0 && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleDownloadAll}
+              className="shrink-0"
+              title="Download all files"
+            >
+              <Download className="h-4 w-4 mr-2" />
+              Download
+            </Button>
+          )}
+        </div>
       </div>
 
       {/* Search Bar */}

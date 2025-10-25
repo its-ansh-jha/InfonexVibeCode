@@ -23,10 +23,11 @@ export default function TerminalPage() {
   useEffect(() => {
     if (!terminalRef.current || !project?.sandboxId) return;
 
-    // Initialize terminal
+    // Initialize terminal with mobile-responsive font size
+    const isMobile = window.innerWidth < 768;
     const term = new Terminal({
       cursorBlink: true,
-      fontSize: 14,
+      fontSize: isMobile ? 12 : 14,
       fontFamily: 'JetBrains Mono, Menlo, Monaco, "Courier New", monospace',
       theme: {
         background: "#0a0a0a",
@@ -191,20 +192,23 @@ export default function TerminalPage() {
 
   return (
     <div className="flex flex-col h-full bg-background dark:bg-background">
-      <div className="border-b border-border dark:border-border p-4">
+      <div className="border-b border-border dark:border-border p-3 md:p-4">
         <div className="flex items-center gap-2">
-          <TerminalIcon className="h-5 w-5 text-muted-foreground" />
-          <h1 className="text-lg font-semibold">Terminal</h1>
+          <TerminalIcon className="h-4 w-4 md:h-5 md:w-5 text-muted-foreground" />
+          <h1 className="text-base md:text-lg font-semibold">Terminal</h1>
           <span className="text-xs text-muted-foreground">
             {project.sandboxId.substring(0, 8)}...
           </span>
         </div>
       </div>
-      <div className="flex-1 overflow-hidden p-4 pb-20 md:pb-4">
+      <div className="flex-1 overflow-hidden p-2 pb-20 md:p-4 md:pb-4">
         <div
           ref={terminalRef}
-          className="h-full rounded-lg border border-border dark:border-border overflow-hidden"
-          style={{ backgroundColor: "#0a0a0a" }}
+          className="h-full w-full rounded-lg border border-border dark:border-border overflow-hidden"
+          style={{ 
+            backgroundColor: "#0a0a0a",
+            maxWidth: "100%"
+          }}
         />
       </div>
     </div>

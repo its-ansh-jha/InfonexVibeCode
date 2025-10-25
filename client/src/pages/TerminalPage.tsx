@@ -14,6 +14,7 @@ export default function TerminalPage() {
   const xtermRef = useRef<Terminal | null>(null);
   const fitAddonRef = useRef<FitAddon | null>(null);
   const currentCommandRef = useRef("");
+  const loadingIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
   const { data: project, isLoading: projectLoading } = useQuery<Project>({
     queryKey: ["/api/projects", projectId],
@@ -68,7 +69,7 @@ export default function TerminalPage() {
     term.writeln("\x1b[1;34mVibe Code Terminal\x1b[0m");
     term.writeln("\x1b[2mConnected to E2B Sandbox: " + project.sandboxId.substring(0, 8) + "...\x1b[0m");
     term.writeln("");
-    term.write("$ ");
+    term.write(`\x1b[1;32m${project.name}\x1b[0m$ `);
 
     // Handle input
     term.onData((data) => {
@@ -80,7 +81,7 @@ export default function TerminalPage() {
         if (currentCommandRef.current.trim()) {
           executeCommand(currentCommandRef.current.trim());
         } else {
-          term.write("$ ");
+          term.write(`\x1b[1;32m${project.name}\x1b[0m$ `);
         }
         currentCommandRef.current = "";
       }
@@ -93,7 +94,7 @@ export default function TerminalPage() {
       }
       // Ctrl+C
       else if (code === 3) {
-        term.write("^C\r\n$ ");
+        term.write(`^C\r\n\x1b[1;32m${project.name}\x1b[0m$ `);
         currentCommandRef.current = "";
       }
       // Regular character
@@ -111,19 +112,36 @@ export default function TerminalPage() {
 
     return () => {
       window.removeEventListener("resize", handleResize);
+      if (loadingIntervalRef.current) {
+        clearInterval(loadingIntervalRef.current);
+      }
       term.dispose();
     };
-  }, [project?.sandboxId]);
+  }, [project?.sandboxId, project?.name]);
 
   const executeCommand = async (command: string) => {
     const term = xtermRef.current;
-    if (!term || !projectId) return;
+    if (!term || !projectId || !project) return;
+
+    // Start loading indicator
+    let dots = 0;
+    const loadingLine = term.buffer.active.cursorY;
+    loadingIntervalRef.current = setInterval(() => {
+      dots = (dots + 1) % 4;
+      const dotStr = ".".repeat(dots);
+      term.write(`\r\x1b[2mExecuting${dotStr}   \x1b[0m`);
+    }, 200);
 
     try {
       const user = auth.currentUser;
       if (!user) {
+        if (loadingIntervalRef.current) {
+          clearInterval(loadingIntervalRef.current);
+          loadingIntervalRef.current = null;
+        }
+        term.write("\r\x1b[K");
         term.writeln("\x1b[31mError: Not authenticated\x1b[0m");
-        term.write("$ ");
+        term.write(`\x1b[1;32m${project.name}\x1b[0m$ `);
         return;
       }
 
@@ -139,10 +157,17 @@ export default function TerminalPage() {
         body: JSON.stringify({ command }),
       });
 
+      // Stop loading indicator
+      if (loadingIntervalRef.current) {
+        clearInterval(loadingIntervalRef.current);
+        loadingIntervalRef.current = null;
+      }
+      term.write("\r\x1b[K");
+
       if (!response.ok) {
         const error = await response.text();
         term.writeln(`\x1b[31mError: ${error}\x1b[0m`);
-        term.write("$ ");
+        term.write(`\x1b[1;32m${project.name}\x1b[0m$ `);
         return;
       }
 
@@ -164,10 +189,16 @@ export default function TerminalPage() {
         term.writeln(`\x1b[31mError: ${result.error}\x1b[0m`);
       }
 
-      term.write("$ ");
+      term.write(`\x1b[1;32m${project.name}\x1b[0m$ `);
     } catch (error) {
+      // Stop loading indicator on error
+      if (loadingIntervalRef.current) {
+        clearInterval(loadingIntervalRef.current);
+        loadingIntervalRef.current = null;
+      }
+      term.write("\r\x1b[K");
       term.writeln(`\x1b[31mError: ${error instanceof Error ? error.message : 'Unknown error'}\x1b[0m`);
-      term.write("$ ");
+      term.write(`\x1b[1;32m${project.name}\x1b[0m$ `);
     }
   };
 

@@ -218,26 +218,6 @@ export default function PreviewPage() {
 
   return (
     <div className="flex flex-col h-full bg-muted/30">
-      {/* Header - visible on all devices */}
-      <div className="border-b border-border dark:border-border p-3 md:p-4 bg-background">
-        <div className="flex items-center gap-2">
-          <Play className="h-4 w-4 md:h-5 md:w-5 text-muted-foreground" />
-          <h1 className="text-base md:text-lg font-semibold">Preview</h1>
-          {hasSandbox && (
-            <Badge variant="outline" className={cn(
-              "gap-1.5 ml-2 text-[10px] sm:text-xs",
-              sandboxExpired && "border-destructive text-destructive"
-            )}>
-              <div className={cn(
-                "w-1.5 h-1.5 rounded-full",
-                sandboxExpired ? "bg-destructive" : "bg-chart-2 animate-pulse"
-              )} />
-              {sandboxExpired ? 'Expired' : 'Active'}
-            </Badge>
-          )}
-        </div>
-      </div>
-      
       {/* Preview container */}
       <div className="flex-1 flex items-center justify-center p-2 sm:p-4">
         {previewUrl ? (

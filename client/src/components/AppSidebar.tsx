@@ -1,4 +1,4 @@
-import { MessageSquare, FileText, Play, FolderOpen, LogOut, Code2 } from "lucide-react";
+import { MessageSquare, FileText, Play, FolderOpen, LogOut, Code2, Terminal } from "lucide-react";
 import {
   Sidebar,
   SidebarContent,
@@ -27,6 +27,11 @@ const menuItems = [
 
 const projectMenuItems = [
   {
+    title: "Preview",
+    url: "/preview",
+    icon: Play,
+  },
+  {
     title: "Agent Chat",
     url: "/chat",
     icon: MessageSquare,
@@ -37,9 +42,9 @@ const projectMenuItems = [
     icon: FileText,
   },
   {
-    title: "Preview",
-    url: "/preview",
-    icon: Play,
+    title: "Terminal",
+    url: "/terminal",
+    icon: Terminal,
   },
 ];
 

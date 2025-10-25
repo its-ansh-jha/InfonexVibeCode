@@ -33,12 +33,12 @@ export function MobileNav() {
               className={cn(
                 "flex flex-col items-center gap-1.5 flex-1 py-2 transition-all rounded-lg",
                 isActive && "bg-muted/50",
-                !isActive && "text-muted-foreground hover:text-foreground",
-                item.title === "Agent" && "text-purple-600 dark:text-purple-500"
+                !isActive && "text-muted-foreground hover:text-foreground"
               )}
               data-testid={`mobile-nav-${item.title.toLowerCase()}`}
             >
               <item.icon className="h-6 w-6" />
+              <span className="text-xs">{item.title}</span>
             </button>
           );
         })}

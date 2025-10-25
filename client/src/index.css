@@ -132,17 +132,17 @@
   --elevate-1: rgba(255,255,255, .04);
   --elevate-2: rgba(255,255,255, .09);
 
-  --background: 220 13% 9%;
+  --background: 222 14% 10%;
 
   --foreground: 0 0% 98%;
 
-  --border: 220 13% 25%;
+  --border: 220 13% 22%;
 
-  --card: 220 13% 13%;
+  --card: 222 14% 12%;
 
   --card-foreground: 0 0% 98%;
 
-  --card-border: 220 13% 20%;
+  --card-border: 220 13% 18%;
 
   --sidebar: 220 13% 11%;
 

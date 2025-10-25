@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useParams } from "wouter";
-import { Send, Bot, User as UserIcon, Loader2, Wrench, FileCode, Terminal, Play, Copy, Check, Sparkles, Image as ImageIcon, X } from "lucide-react";
+import { Send, Bot, User as UserIcon, Loader2, Wrench, FileCode, Terminal, Play, Copy, Check, Sparkles, Image as ImageIcon, X, MessageSquare } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Card } from "@/components/ui/card";
@@ -521,36 +521,47 @@ export default function ChatPage() {
     );
   }
 
+  const quickActions = [
+    "Check my app for bugs",
+    "Add payment processing",
+    "Add SMS message sending",
+    "Add a database",
+    "Create user authentication",
+    "Add email notifications"
+  ];
+
+  const handleQuickAction = (action: string) => {
+    setInput(action);
+    textareaRef.current?.focus();
+  };
+
   return (
-    <div className="flex flex-col h-full overflow-hidden">
+    <div className="flex flex-col h-full overflow-hidden bg-background dark:bg-background">
       {/* Messages Area */}
       <div className="flex-1 overflow-y-auto overflow-x-hidden p-3 sm:p-4 md:p-6 space-y-4 sm:space-y-6 pb-32 md:pb-6">
         {messages && messages.length === 0 && !streamingMessage ? (
-          <div className="flex flex-col items-center justify-center h-full text-center max-w-md mx-auto px-4">
-            <div className="flex items-center justify-center w-16 h-16 sm:w-20 sm:h-20 rounded-full bg-gradient-to-br from-primary/20 to-primary/5 mb-4 animate-in fade-in zoom-in duration-300">
-              <Sparkles className="h-8 w-8 sm:h-10 sm:w-10 text-primary" />
+          <div className="flex flex-col items-center justify-center h-full text-center max-w-2xl mx-auto px-4">
+            <div className="flex items-center justify-center w-16 h-16 sm:w-20 sm:h-20 rounded-2xl bg-muted/50 dark:bg-muted/30 mb-6 animate-in fade-in zoom-in duration-300">
+              <MessageSquare className="h-8 w-8 sm:h-10 sm:w-10 text-muted-foreground" />
             </div>
-            <h3 className="text-xl sm:text-2xl font-semibold mb-2">Start Building with AI</h3>
-            <p className="text-sm sm:text-base text-muted-foreground mb-6">
-              Tell the AI what app you want to build.
+            <h1 className="text-2xl sm:text-3xl font-semibold mb-3 text-foreground dark:text-foreground">
+              New chat with Agent
+            </h1>
+            <p className="text-sm sm:text-base text-muted-foreground dark:text-muted-foreground mb-8 max-w-md">
+              Agent can make changes, review its work, and debug itself automatically.
             </p>
-            <div className="grid grid-cols-2 gap-2 w-full max-w-xs">
-              <Badge variant="secondary" className="text-xs py-2 justify-center hover:bg-secondary/80 transition-colors">
-                <FileCode className="h-3 w-3 mr-1" />
-                Create files
-              </Badge>
-              <Badge variant="secondary" className="text-xs py-2 justify-center hover:bg-secondary/80 transition-colors">
-                <Play className="h-3 w-3 mr-1" />
-                Run code
-              </Badge>
-              <Badge variant="secondary" className="text-xs py-2 justify-center hover:bg-secondary/80 transition-colors">
-                <Terminal className="h-3 w-3 mr-1" />
-                Execute commands
-              </Badge>
-              <Badge variant="secondary" className="text-xs py-2 justify-center hover:bg-secondary/80 transition-colors">
-                <Sparkles className="h-3 w-3 mr-1" />
-                Search web
-              </Badge>
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 sm:gap-3 w-full max-w-2xl mb-8">
+              {quickActions.map((action, idx) => (
+                <Button
+                  key={idx}
+                  variant="secondary"
+                  className="text-xs sm:text-sm py-3 sm:py-6 justify-center hover:bg-secondary/80 dark:hover:bg-secondary/80 transition-colors h-auto whitespace-normal"
+                  onClick={() => handleQuickAction(action)}
+                  data-testid={`button-quick-action-${idx}`}
+                >
+                  {action}
+                </Button>
+              ))}
             </div>
           </div>
         ) : (
@@ -734,6 +745,16 @@ export default function ChatPage() {
               <Button
                 variant="ghost"
                 size="icon"
+                disabled={isStreaming}
+                className="h-10 w-10 shrink-0 hover:bg-muted"
+                title="Build"
+                data-testid="button-build"
+              >
+                <Wrench className="h-5 w-5" />
+              </Button>
+              <Button
+                variant="ghost"
+                size="icon"
                 onClick={() => fileInputRef.current?.click()}
                 disabled={isStreaming || selectedImages.length >= 5}
                 className="h-10 w-10 shrink-0 hover:bg-muted"
@@ -744,7 +765,7 @@ export default function ChatPage() {
               </Button>
               <Textarea
                 ref={textareaRef}
-                placeholder="Ask anything to build..."
+                placeholder="Make, test, iterate..."
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
                 onKeyDown={handleKeyPress}

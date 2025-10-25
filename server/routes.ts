@@ -296,6 +296,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const project = await storage.getProject(req.params.projectId);
 
       if (project?.sandboxUrl && project?.sandboxId) {
+        // Check and fix vite.config.ts if needed
+        await ensureViteConfigAllowedHosts(req.params.projectId);
         res.json({ url: project.sandboxUrl });
       } else {
         const sandboxInfo = await createSandbox(req.params.projectId);
@@ -303,6 +305,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           sandboxId: sandboxInfo.sandboxId,
           sandboxUrl: sandboxInfo.url,
         });
+        // Check and fix vite.config.ts if needed
+        await ensureViteConfigAllowedHosts(req.params.projectId);
         res.json({ url: sandboxInfo.url });
       }
     } catch (error: any) {
@@ -337,6 +341,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
           console.error(`Failed to sync file ${file.path} to new sandbox:`, error);
         }
       }
+
+      // Ensure vite.config.ts has correct allowedHosts setting
+      await ensureViteConfigAllowedHosts(req.params.projectId);
 
       // Get project to check for workflow command
       const project = await storage.getProject(req.params.projectId);

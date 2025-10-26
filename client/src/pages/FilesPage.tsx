@@ -101,21 +101,11 @@ export default function FilesPage() {
 
   const updateContentMutation = useMutation({
     mutationFn: async ({ fileId, content }: { fileId: string; content: string }) => {
-      const idToken = await auth.currentUser?.getIdToken();
-      const response = await fetch(`/api/files/${fileId}/content`, {
+      return await apiRequest(`/api/files/${fileId}/content`, {
         method: "PATCH",
-        headers: {
-          "Authorization": `Bearer ${idToken}`,
-          "Content-Type": "application/json",
-        },
         body: JSON.stringify({ content }),
+        headers: { "Content-Type": "application/json" },
       });
-      
-      if (!response.ok) {
-        throw new Error("Failed to save file");
-      }
-      
-      return response.json();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/files", projectId] });

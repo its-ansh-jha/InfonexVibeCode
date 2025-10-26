@@ -101,12 +101,21 @@ export default function FilesPage() {
 
   const updateContentMutation = useMutation({
     mutationFn: async ({ fileId, content }: { fileId: string; content: string }) => {
-      const response = await apiRequest(`/api/files/${fileId}/content`, {
-        method: "PATCH",
+      const idToken = await auth.currentUser?.getIdToken();
+      const response = await fetch(`/api/files/${projectId}/${fileId}`, {
+        method: "PUT",
+        headers: {
+          "Authorization": `Bearer ${idToken}`,
+          "Content-Type": "application/json",
+        },
         body: JSON.stringify({ content }),
-        headers: { "Content-Type": "application/json" },
       });
-      return response;
+      
+      if (!response.ok) {
+        throw new Error("Failed to save file");
+      }
+      
+      return response.json();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/files", projectId] });
@@ -318,7 +327,7 @@ export default function FilesPage() {
             )}
           </Button>
         </div>
-        <div className="flex-1 overflow-hidden">
+        <div className="flex-1 overflow-auto" style={{ touchAction: 'pan-y' }}>
           {isLoadingContent ? (
             <div className="flex items-center justify-center h-full">
               <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
@@ -336,6 +345,15 @@ export default function FilesPage() {
                 lineNumbers: "on",
                 scrollBeyondLastLine: false,
                 automaticLayout: true,
+                scrollbar: {
+                  vertical: 'auto',
+                  horizontal: 'auto',
+                  useShadows: false,
+                  verticalScrollbarSize: 10,
+                  horizontalScrollbarSize: 10,
+                },
+                mouseWheelScrollSensitivity: 1,
+                fastScrollSensitivity: 5,
               }}
             />
           )}

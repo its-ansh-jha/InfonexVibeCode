@@ -8,11 +8,11 @@ Vibe Code is an AI-powered app building platform that allows users to create app
 - **Project Management**: Create and manage multiple app projects
 - **Advanced AI Chat Agent**: 
   - Powered by Google's Gemini 2.5 Flash Preview model
-  - Streaming responses with live tool execution feedback
+  - Streaming responses with live MCP tool execution feedback
   - Real-time action tracking with visual progress indicators
 - **AWS S3 Storage**: Secure file storage for all project files
 - **E2B Sandbox Integration**: Real-time code execution and preview in isolated sandboxes
-- **Advanced AI Tools**:
+- **Advanced AI MCP Tools**:
   - `create_boilerplate`: Create complete boilerplate project structures (React+Vite with properly configured vite.config.ts)
   - `write_file`: Create or update files (saved to S3 and E2B sandbox)
   - `edit_file`: Edit specific parts of existing files
@@ -22,8 +22,8 @@ Vibe Code is an AI-powered app building platform that allows users to create app
   - `run_shell`: Execute shell commands with support for long-running processes (servers, npm run dev)
   - `run_code`: Run Python/JavaScript code in E2B code interpreter
   - `serper_web_search`: Proactive web search during operations for documentation and best practices
-- **Streaming Responses**: Real-time AI responses with live tool execution feedback
-- **Simplified Chat Display**: Shows tool summaries (e.g., "Created index.html") instead of full code
+- **Streaming Responses**: Real-time AI responses with live MCP tool execution feedback
+- **Simplified Chat Display**: Shows MCP tool summaries (e.g., "Created index.html") instead of full code
 - **Mobile-Friendly**: Responsive design with bottom tab navigation on mobile
 - **Dark/Light Mode**: Theme toggle with localStorage persistence
 - **PostgreSQL Database**: Persistent data storage
@@ -53,7 +53,7 @@ Vibe Code is an AI-powered app building platform that allows users to create app
 - `projects`: User projects with S3 prefix, E2B sandbox info, and workflow command
   - `workflowCommand`: Auto-saved server start command (e.g., "npm run dev") that runs when sandbox is recreated
 - `files`: File metadata tracking (path, s3Key, size, mimeType)
-- `messages`: Chat history with tool call metadata and real-time action tracking
+- `messages`: Chat history with MCP tool call metadata and real-time action tracking
 
 ## API Endpoints
 
@@ -80,7 +80,7 @@ Vibe Code is an AI-powered app building platform that allows users to create app
 
 ### Messages
 - `GET /api/messages/:projectId`: Get chat history
-- `POST /api/messages/stream`: Send message and receive streaming AI response with tool execution
+- `POST /api/messages/stream`: Send message and receive streaming AI response with MCP tool execution
 
 ## Environment Variables
 - `VITE_FIREBASE_PROJECT_ID`: Firebase project ID
@@ -118,13 +118,13 @@ Vibe Code is an AI-powered app building platform that allows users to create app
 
 ## Recent Changes
 - **October 25, 2025** (Latest Session): Enhanced AI Capabilities & Command Tracking
-  - **Boilerplate Creation Tool**: AI can now create complete project structures with one command
-    - `create_boilerplate` tool for React+Vite projects with properly configured vite.config.ts
+  - **Boilerplate Creation MCP Tool**: AI can now create complete project structures with one command
+    - `create_boilerplate` MCP tool for React+Vite projects with properly configured vite.config.ts
     - Includes all necessary files: package.json, vite.config.ts, index.html, src/main.tsx, src/App.tsx, TypeScript configs
     - Fixes the vite allowedHosts configuration issue automatically
-  - **File Management Tools**: AI can now browse and read existing files
-    - `list_files` tool to see all files in a project
-    - `read_file` tool to read any file content from S3 or E2B sandbox
+  - **File Management MCP Tools**: AI can now browse and read existing files
+    - `list_files` MCP tool to see all files in a project
+    - `read_file` MCP tool to read any file content from S3 or E2B sandbox
     - AI is now fully aware of existing project structure before making changes
   - **Enhanced Command Execution UI**: Real-time loading states for all commands
     - Loading spinner (🔄) shows while commands are executing
@@ -144,7 +144,7 @@ Vibe Code is an AI-powered app building platform that allows users to create app
 
 - **October 23, 2025**: Advanced AI Platform Enhancements
   - **Enhanced File Management**:
-    - `delete_file` tool now removes files from all three locations: S3, E2B sandbox, and database
+    - `delete_file` MCP tool now removes files from all three locations: S3, E2B sandbox, and database
     - Accurate status reporting with detailed error messages for each deletion step
     - Partial deletion handling with clear feedback when operations fail
   - **Advanced Shell Command Execution**:
@@ -162,7 +162,7 @@ Vibe Code is an AI-powered app building platform that allows users to create app
   - **AI Streaming Improvements**:
     - Server commands (npm run dev, python servers) now run in background without blocking AI stream
     - AI responses complete immediately after starting long-running commands
-    - Tool summaries show "Created index.html" and "Started: npm run dev" format (concise, no full code)
+    - MCP tool summaries show "Created index.html" and "Started: npm run dev" format (concise, no full code)
   - **Automatic Workflow System**:
     - Added `workflowCommand` field to projects schema
     - When AI starts a server (npm run dev, python app.py, etc.), command is auto-saved to project

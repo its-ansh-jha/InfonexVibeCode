@@ -31,10 +31,16 @@ export default function PreviewPage() {
 
   // Validate sandbox periodically
   useEffect(() => {
-    if (!projectId || !project?.sandboxId) return;
+    if (!projectId) return;
 
     const validateSandbox = async () => {
       try {
+        // If no sandboxId exists yet, don't mark as expired
+        if (!project?.sandboxId) {
+          setSandboxExpired(false);
+          return;
+        }
+
         const idToken = await auth.currentUser?.getIdToken();
         const response = await fetch(`/api/sandbox/${projectId}/validate`, {
           headers: {
@@ -45,9 +51,13 @@ export default function PreviewPage() {
         if (response.ok) {
           const data = await response.json();
           setSandboxExpired(!data.isValid);
+        } else {
+          // If validation endpoint fails, assume expired
+          setSandboxExpired(true);
         }
       } catch (error) {
-        // If validation fails, assume expired
+        // If validation fails, assume expired (network error, auth error, etc.)
+        console.error('Sandbox validation error:', error);
         setSandboxExpired(true);
       }
     };

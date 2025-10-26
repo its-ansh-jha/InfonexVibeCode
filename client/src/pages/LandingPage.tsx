@@ -162,6 +162,12 @@ export default function LandingPage() {
             <a href="#docs" className="text-sm font-medium hover:text-primary transition-colors" data-testid="link-docs">
               Docs
             </a>
+            <a href="#about" className="text-sm font-medium hover:text-primary transition-colors" data-testid="link-about">
+              About
+            </a>
+            <a href="#security" className="text-sm font-medium hover:text-primary transition-colors" data-testid="link-security">
+              Security
+            </a>
             <ThemeToggle />
             <Button onClick={() => setLocation("/login")} data-testid="button-get-started-header">
               Get Started
@@ -337,8 +343,142 @@ export default function LandingPage() {
         </div>
       </section>
 
+      {/* About Section */}
+      <section id="about" className="container px-4 py-16 md:py-24 bg-muted/30">
+        <div className="max-w-4xl mx-auto space-y-8">
+          <div className="text-center space-y-4">
+            <h2 className="text-3xl md:text-4xl font-bold">About InfonexAgent</h2>
+            <p className="text-lg text-muted-foreground">
+              Empowering developers with AI-driven tools
+            </p>
+          </div>
+          <div className="space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle>Our Mission</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <p className="text-muted-foreground">
+                  InfonexAgent was created to democratize software development by making it accessible to everyone through natural language. We believe that building applications should be as simple as having a conversation.
+                </p>
+                <p className="text-muted-foreground">
+                  Our platform combines cutting-edge AI technology with secure cloud infrastructure to provide a seamless development experience. Whether you're a seasoned developer or just starting out, InfonexAgent helps you bring your ideas to life faster than ever before.
+                </p>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardHeader>
+                <CardTitle>Technology Stack</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <ul className="space-y-2">
+                  <li className="flex items-start gap-2 text-muted-foreground">
+                    <div className="flex items-center justify-center w-5 h-5 rounded-full bg-primary/10 mt-0.5 shrink-0">
+                      <div className="w-2 h-2 rounded-full bg-primary" />
+                    </div>
+                    Google Gemini 2.5 Flash Preview for advanced AI capabilities
+                  </li>
+                  <li className="flex items-start gap-2 text-muted-foreground">
+                    <div className="flex items-center justify-center w-5 h-5 rounded-full bg-primary/10 mt-0.5 shrink-0">
+                      <div className="w-2 h-2 rounded-full bg-primary" />
+                    </div>
+                    E2B Sandboxes for secure, isolated code execution
+                  </li>
+                  <li className="flex items-start gap-2 text-muted-foreground">
+                    <div className="flex items-center justify-center w-5 h-5 rounded-full bg-primary/10 mt-0.5 shrink-0">
+                      <div className="w-2 h-2 rounded-full bg-primary" />
+                    </div>
+                    AWS S3 for reliable cloud storage
+                  </li>
+                  <li className="flex items-start gap-2 text-muted-foreground">
+                    <div className="flex items-center justify-center w-5 h-5 rounded-full bg-primary/10 mt-0.5 shrink-0">
+                      <div className="w-2 h-2 rounded-full bg-primary" />
+                    </div>
+                    Firebase Authentication for secure user management
+                  </li>
+                </ul>
+              </CardContent>
+            </Card>
+          </div>
+        </div>
+      </section>
+
+      {/* Security Section */}
+      <section id="security" className="container px-4 py-16 md:py-24">
+        <div className="max-w-4xl mx-auto space-y-8">
+          <div className="text-center space-y-4">
+            <h2 className="text-3xl md:text-4xl font-bold">Security & Privacy</h2>
+            <p className="text-lg text-muted-foreground">
+              Your code and data are protected at every level
+            </p>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <Card>
+              <CardHeader>
+                <div className="flex items-center gap-3">
+                  <div className="flex items-center justify-center w-10 h-10 rounded-lg bg-primary/10">
+                    <Shield className="h-5 w-5 text-primary" />
+                  </div>
+                  <CardTitle>Isolated Sandboxes</CardTitle>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <p className="text-muted-foreground">
+                  Every project runs in its own isolated E2B sandbox environment, ensuring complete separation and preventing any cross-contamination between projects.
+                </p>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardHeader>
+                <div className="flex items-center gap-3">
+                  <div className="flex items-center justify-center w-10 h-10 rounded-lg bg-primary/10">
+                    <Shield className="h-5 w-5 text-primary" />
+                  </div>
+                  <CardTitle>Secure Authentication</CardTitle>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <p className="text-muted-foreground">
+                  Firebase Authentication with Google OAuth ensures your account is protected with industry-standard security protocols and multi-factor authentication options.
+                </p>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardHeader>
+                <div className="flex items-center gap-3">
+                  <div className="flex items-center justify-center w-10 h-10 rounded-lg bg-primary/10">
+                    <Cloud className="h-5 w-5 text-primary" />
+                  </div>
+                  <CardTitle>Encrypted Storage</CardTitle>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <p className="text-muted-foreground">
+                  All files are stored in AWS S3 with encryption at rest and in transit. Your code and data are protected with enterprise-grade security measures.
+                </p>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardHeader>
+                <div className="flex items-center gap-3">
+                  <div className="flex items-center justify-center w-10 h-10 rounded-lg bg-primary/10">
+                    <Shield className="h-5 w-5 text-primary" />
+                  </div>
+                  <CardTitle>Data Privacy</CardTitle>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <p className="text-muted-foreground">
+                  We never share your code or personal information with third parties. Your projects remain private and under your complete control at all times.
+                </p>
+              </CardContent>
+            </Card>
+          </div>
+        </div>
+      </section>
+
       {/* CTA Section */}
-      <section className="container px-4 py-16 md:py-24">
+      <section className="container px-4 py-16 md:py-24 bg-muted/30">
         <Card className="border-2 border-primary/50 bg-gradient-to-br from-primary/5 to-blue-500/5">
           <CardContent className="flex flex-col items-center text-center space-y-6 py-12">
             <h2 className="text-3xl md:text-4xl font-bold">Ready to Start Building?</h2>

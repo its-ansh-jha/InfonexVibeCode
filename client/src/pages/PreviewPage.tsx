@@ -162,6 +162,33 @@ export default function PreviewPage() {
         title: "Sandbox recreated",
         description: `New sandbox created with ${data.filesSynced} files synced`,
       });
+
+      // If there's a workflow command, run it automatically
+      if (data.workflowCommand) {
+        toast({
+          title: "Running workflow",
+          description: data.workflowCommand,
+        });
+
+        // Start auto-refresh cycle for 5 seconds
+        const refreshInterval = setInterval(() => {
+          const iframe = document.querySelector('[data-testid="iframe-preview"]') as HTMLIFrameElement;
+          if (iframe && previewUrl) {
+            const url = new URL(previewUrl);
+            url.searchParams.set('_refresh', Date.now().toString());
+            iframe.src = url.toString();
+          }
+        }, 1000); // Refresh every second
+
+        // Stop auto-refresh after 5 seconds
+        setTimeout(() => {
+          clearInterval(refreshInterval);
+          toast({
+            title: "Preview ready",
+            description: "Auto-refresh stopped",
+          });
+        }, 5000);
+      }
     } catch (error: any) {
       toast({
         title: "Failed to recreate sandbox",

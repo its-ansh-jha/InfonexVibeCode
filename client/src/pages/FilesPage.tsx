@@ -102,8 +102,8 @@ export default function FilesPage() {
   const updateContentMutation = useMutation({
     mutationFn: async ({ fileId, content }: { fileId: string; content: string }) => {
       const idToken = await auth.currentUser?.getIdToken();
-      const response = await fetch(`/api/files/${projectId}/${fileId}`, {
-        method: "PUT",
+      const response = await fetch(`/api/files/${fileId}/content`, {
+        method: "PATCH",
         headers: {
           "Authorization": `Bearer ${idToken}`,
           "Content-Type": "application/json",

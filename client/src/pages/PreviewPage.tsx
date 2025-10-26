@@ -265,21 +265,23 @@ export default function PreviewPage() {
               </div>
 
               <div className="flex items-center gap-0.5 sm:gap-1 shrink-0">
-                <Button
-                  variant={sandboxExpired ? "destructive" : "ghost"}
-                  size="sm"
-                  onClick={handleRecreateSandbox}
-                  disabled={isRecreating}
-                  className="h-7 w-7 p-0"
-                  title="Recreate sandbox"
-                  data-testid="button-recreate-sandbox"
-                >
-                  {isRecreating ? (
-                    <Loader2 className="h-3 w-3 animate-spin" />
-                  ) : (
-                    <RefreshCw className="h-3 w-3" />
-                  )}
-                </Button>
+                {sandboxExpired && (
+                  <Button
+                    variant="destructive"
+                    size="sm"
+                    onClick={handleRecreateSandbox}
+                    disabled={isRecreating}
+                    className="h-7 w-7 p-0"
+                    title="Recreate sandbox"
+                    data-testid="button-recreate-sandbox"
+                  >
+                    {isRecreating ? (
+                      <Loader2 className="h-3 w-3 animate-spin" />
+                    ) : (
+                      <RefreshCw className="h-3 w-3" />
+                    )}
+                  </Button>
+                )}
 
                 {project?.workflowCommand && (
                   <Button
@@ -320,17 +322,19 @@ export default function PreviewPage() {
                   <Copy className="h-3 w-3" />
                 </Button>
 
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={handleRefresh}
-                  disabled={isRefreshing}
-                  className="h-7 w-7 p-0"
-                  title="Refresh"
-                  data-testid="button-refresh-preview"
-                >
-                  <RefreshCw className={cn("h-3 w-3", isRefreshing && "animate-spin")} />
-                </Button>
+                {!sandboxExpired && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={handleRefresh}
+                    disabled={isRefreshing}
+                    className="h-7 w-7 p-0"
+                    title="Refresh preview"
+                    data-testid="button-refresh-preview"
+                  >
+                    <RefreshCw className={cn("h-3 w-3", isRefreshing && "animate-spin")} />
+                  </Button>
+                )}
 
                 <Button
                   variant="ghost"

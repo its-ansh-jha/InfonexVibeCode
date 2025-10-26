@@ -281,6 +281,99 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Update file content (for manual editing)
+  app.patch("/api/files/:fileId/content", requireAuth, async (req: Request, res) => {
+    try {
+      const file = await storage.getFile(req.params.fileId);
+      if (!file) {
+        return res.status(404).json({ error: "File not found" });
+      }
+
+      if (!(await checkProjectOwnership(file.projectId, req.userId!))) {
+        return res.status(403).json({ error: "Forbidden: Access denied" });
+      }
+
+      const { content } = req.body;
+      if (typeof content !== 'string') {
+        return res.status(400).json({ error: "Content must be a string" });
+      }
+
+      // Upload to S3
+      const s3Key = await uploadFileToS3(file.projectId, file.path, content);
+
+      // Write to E2B sandbox
+      try {
+        await writeFileToSandbox(file.projectId, file.path, content);
+      } catch (error) {
+        console.error('Failed to write to sandbox:', error);
+      }
+
+      // Update file in database
+      const updated = await storage.updateFile(file.id, {
+        s3Key,
+        size: Buffer.byteLength(content, 'utf-8'),
+      });
+
+      res.json({ success: true, file: updated });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Rename file (update path)
+  app.patch("/api/files/:fileId/rename", requireAuth, async (req: Request, res) => {
+    try {
+      const file = await storage.getFile(req.params.fileId);
+      if (!file) {
+        return res.status(404).json({ error: "File not found" });
+      }
+
+      if (!(await checkProjectOwnership(file.projectId, req.userId!))) {
+        return res.status(403).json({ error: "Forbidden: Access denied" });
+      }
+
+      const { newPath } = req.body;
+      if (typeof newPath !== 'string' || !newPath.trim()) {
+        return res.status(400).json({ error: "New path must be a non-empty string" });
+      }
+
+      // Check if file already exists at new path
+      const existingFile = await storage.getFileByPath(file.projectId, newPath);
+      if (existingFile) {
+        return res.status(409).json({ error: "A file already exists at this path" });
+      }
+
+      // Read current content from S3
+      const content = await getFileFromS3(file.s3Key);
+
+      // Upload to new S3 location
+      const newS3Key = await uploadFileToS3(file.projectId, newPath, content);
+
+      // Delete old file from S3
+      await deleteFileFromS3(file.s3Key);
+
+      // Delete old file from E2B sandbox
+      await deleteFileFromSandbox(file.projectId, file.path);
+
+      // Write new file to E2B sandbox
+      try {
+        await writeFileToSandbox(file.projectId, newPath, content);
+      } catch (error) {
+        console.error('Failed to write to sandbox:', error);
+      }
+
+      // Update file in database
+      const updated = await storage.updateFile(file.id, {
+        path: newPath,
+        s3Key: newS3Key,
+      });
+
+      res.json({ success: true, file: updated });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
   // E2B Sandbox operations
   app.post("/api/sandbox/:projectId/execute", requireAuth, async (req: Request, res) => {
     try {

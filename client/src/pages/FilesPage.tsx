@@ -52,9 +52,7 @@ export default function FilesPage() {
 
   const deleteMutation = useMutation({
     mutationFn: async (fileId: string) => {
-      await apiRequest(`/api/files/${fileId}`, {
-        method: "DELETE",
-      });
+      await apiRequest("DELETE", `/api/files/${fileId}`);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/files", projectId] });
@@ -74,11 +72,7 @@ export default function FilesPage() {
 
   const renameMutation = useMutation({
     mutationFn: async ({ fileId, newPath }: { fileId: string; newPath: string }) => {
-      const response = await apiRequest(`/api/files/${fileId}/rename`, {
-        method: "PATCH",
-        body: JSON.stringify({ newPath }),
-        headers: { "Content-Type": "application/json" },
-      });
+      const response = await apiRequest("PATCH", `/api/files/${fileId}/rename`, { newPath });
       return response;
     },
     onSuccess: () => {

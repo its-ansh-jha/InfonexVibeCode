@@ -149,24 +149,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get("/api/files/:projectId/:fileId", requireAuth, async (req: Request, res) => {
-    try {
-      if (!(await checkProjectOwnership(req.params.projectId, req.userId!))) {
-        return res.status(403).json({ error: "Forbidden: Access denied" });
-      }
-
-      const file = await storage.getFile(req.params.fileId);
-      if (!file) {
-        return res.status(404).json({ error: "File not found" });
-      }
-
-      const content = await getFileFromS3(file.s3Key);
-      res.json({ ...file, content });
-    } catch (error: any) {
-      res.status(500).json({ error: error.message });
-    }
-  });
-
   app.get("/api/files/:projectId/download", requireAuth, async (req: Request, res) => {
     try {
       if (!(await checkProjectOwnership(req.params.projectId, req.userId!))) {
@@ -200,6 +182,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json(downloadData);
     } catch (error: any) {
       console.error('Download error:', error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.get("/api/files/:projectId/:fileId", requireAuth, async (req: Request, res) => {
+    try {
+      if (!(await checkProjectOwnership(req.params.projectId, req.userId!))) {
+        return res.status(403).json({ error: "Forbidden: Access denied" });
+      }
+
+      const file = await storage.getFile(req.params.fileId);
+      if (!file) {
+        return res.status(404).json({ error: "File not found" });
+      }
+
+      const content = await getFileFromS3(file.s3Key);
+      res.json({ ...file, content });
+    } catch (error: any) {
       res.status(500).json({ error: error.message });
     }
   });

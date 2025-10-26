@@ -117,10 +117,12 @@ export default function PreviewPage() {
   const handleRefresh = async () => {
     setIsRefreshing(true);
     
-    // Reload the iframe
+    // Reload the iframe by adding a timestamp to force refresh
     const iframe = document.querySelector('[data-testid="iframe-preview"]') as HTMLIFrameElement;
-    if (iframe) {
-      iframe.src = iframe.src;
+    if (iframe && previewUrl) {
+      const url = new URL(previewUrl);
+      url.searchParams.set('_refresh', Date.now().toString());
+      iframe.src = url.toString();
     }
     
     await Promise.all([refetchProject(), refetchSandbox()]);

@@ -105,15 +105,14 @@ export default function LandingPage() {
           </nav>
 
           {/* Mobile Menu */}
-          <div className="flex md:hidden items-center gap-2">
-            <ThemeToggle />
+          <div className="flex md:hidden items-center gap-2 order-first">
             <Sheet open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
               <SheetTrigger asChild>
                 <Button variant="ghost" size="icon" data-testid="button-mobile-menu">
                   <Menu className="h-5 w-5" />
                 </Button>
               </SheetTrigger>
-              <SheetContent side="right" className="w-[300px] sm:w-[400px]">
+              <SheetContent side="left" className="w-[300px] sm:w-[400px]">
                 <nav className="flex flex-col gap-4 mt-8">
                   <a
                     href="#features"
@@ -166,6 +165,7 @@ export default function LandingPage() {
                 </nav>
               </SheetContent>
             </Sheet>
+            <ThemeToggle />
           </div>
         </div>
       </header>

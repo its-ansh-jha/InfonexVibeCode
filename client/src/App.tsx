@@ -10,6 +10,7 @@ import { ThemeProvider } from "@/contexts/ThemeContext";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { AppSidebar } from "@/components/AppSidebar";
 import { MobileNav } from "@/components/MobileNav";
+import LandingPage from "@/pages/LandingPage";
 import LoginPage from "@/pages/LoginPage";
 import ProjectsPage from "@/pages/ProjectsPage";
 import ChatPage from "@/pages/ChatPage";
@@ -31,7 +32,7 @@ function ProtectedRoute({ component: Component }: { component: React.ComponentTy
   }
 
   if (!user) {
-    return <Redirect to="/" />;
+    return <Redirect to="/login" />;
   }
 
   return <Component />;
@@ -51,6 +52,9 @@ function Router() {
   return (
     <Switch>
       <Route path="/">
+        {user ? <Redirect to="/projects" /> : <LandingPage />}
+      </Route>
+      <Route path="/login">
         {user ? <Redirect to="/projects" /> : <LoginPage />}
       </Route>
       <Route path="/projects">

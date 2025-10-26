@@ -1,10 +1,21 @@
 import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
+import { execSync } from "child_process";
 
 const app = express();
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
+
+// Auto-push database schema on startup
+try {
+  log("Pushing database schema...");
+  execSync("npm run db:push", { stdio: "inherit" });
+  log("Database schema pushed successfully");
+} catch (error) {
+  log("Warning: Failed to push database schema");
+  console.error(error);
+}
 
 app.use((req, res, next) => {
   const start = Date.now();

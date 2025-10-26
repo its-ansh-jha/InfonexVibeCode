@@ -48,7 +48,7 @@ export default function LandingPage() {
       title: "Advanced AI Chat Agent",
       items: [
         "Powered by Google Gemini 2.5 Flash Preview model",
-        "Streaming responses with live tool execution feedback",
+        "Streaming responses with live MCP tool execution feedback",
         "Real-time action tracking with visual progress indicators",
         "Proactive web search for documentation and best practices",
       ],

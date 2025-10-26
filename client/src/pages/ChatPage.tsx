@@ -68,10 +68,10 @@ function CodeBlock({ code, language = "javascript" }: { code: string; language?:
 }
 
 function MessageContent({ content }: { content: string }) {
-  // Remove tool call patterns with JSON: [tool:name]{...}
+  // Remove MCP tool call patterns with JSON: [tool:name]{...}
   let cleanedContent = content.replace(/\[tool:\w+\]\{[^]*?\}(?=\s*(?:\[tool:|\[action:|$))/g, '');
   
-  // Remove standalone tool call patterns without JSON: [tool:name] (including partial ones)
+  // Remove standalone MCP tool call patterns without JSON: [tool:name] (including partial ones)
   cleanedContent = cleanedContent.replace(/\[tool:[^\]]*\]/g, '');
   
   // Remove JSON objects with proper brace matching (handles nested structures)
@@ -98,7 +98,7 @@ function MessageContent({ content }: { content: string }) {
       } else if (char === '}') {
         depth--;
         if (depth === 0 && jsonStart !== -1) {
-          // Check if this looks like a JSON object with common tool properties
+          // Check if this looks like a JSON object with common MCP tool properties
           const jsonCandidate = cleanedContent.substring(jsonStart, i + 1);
           if (/(?:content|path|code|command|name|language|query|arguments)/.test(jsonCandidate)) {
             // Skip this JSON block
@@ -436,7 +436,7 @@ export default function ChatPage() {
               tools.push(toolCall);
               setStreamingTools([...tools]);
             } else if (data.type === 'tool_complete') {
-              // Find the in-progress tool and mark it as completed
+              // Find the in-progress MCP tool and mark it as completed
               const toolIndex = tools.findIndex(t => t.name === data.name && t.status === 'in_progress');
               if (toolIndex !== -1) {
                 tools[toolIndex].status = 'completed';

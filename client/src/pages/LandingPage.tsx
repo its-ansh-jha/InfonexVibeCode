@@ -77,35 +77,9 @@ export default function LandingPage() {
     <div className="min-h-screen bg-background">
       {/* Header */}
       <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-        <div className="container flex h-16 items-center justify-between px-4">
-          <div className="flex items-center gap-2">
-            <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-primary">
-              <Code2 className="h-5 w-5 text-primary-foreground" />
-            </div>
-            <span className="text-xl font-bold bg-gradient-to-r from-primary to-blue-600 bg-clip-text text-transparent">
-              InfonexAgent
-            </span>
-          </div>
-
-          {/* Desktop Navigation */}
-          <nav className="hidden md:flex items-center gap-6">
-            <a href="#features" className="text-sm font-medium hover:text-primary transition-colors" data-testid="link-features">
-              Features
-            </a>
-            <a href="#capabilities" className="text-sm font-medium hover:text-primary transition-colors" data-testid="link-capabilities">
-              Capabilities
-            </a>
-            <a href="#docs" className="text-sm font-medium hover:text-primary transition-colors" data-testid="link-docs">
-              Docs
-            </a>
-            <ThemeToggle />
-            <Button onClick={() => setLocation("/login")} data-testid="button-get-started-header">
-              Get Started
-            </Button>
-          </nav>
-
-          {/* Mobile Menu */}
-          <div className="flex md:hidden items-center gap-2 order-first">
+        <div className="container flex h-16 items-center px-4">
+          {/* Mobile Menu - Left Side */}
+          <div className="flex md:hidden items-center gap-2">
             <Sheet open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
               <SheetTrigger asChild>
                 <Button variant="ghost" size="icon" data-testid="button-mobile-menu">
@@ -165,6 +139,37 @@ export default function LandingPage() {
                 </nav>
               </SheetContent>
             </Sheet>
+          </div>
+
+          {/* Logo and Name - Center/Left */}
+          <div className="flex items-center gap-2 flex-1 md:flex-none">
+            <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-primary">
+              <Code2 className="h-5 w-5 text-primary-foreground" />
+            </div>
+            <span className="text-xl font-bold bg-gradient-to-r from-primary to-blue-600 bg-clip-text text-transparent">
+              InfonexAgent
+            </span>
+          </div>
+
+          {/* Desktop Navigation - Right Side */}
+          <nav className="hidden md:flex items-center gap-6 ml-auto">
+            <a href="#features" className="text-sm font-medium hover:text-primary transition-colors" data-testid="link-features">
+              Features
+            </a>
+            <a href="#capabilities" className="text-sm font-medium hover:text-primary transition-colors" data-testid="link-capabilities">
+              Capabilities
+            </a>
+            <a href="#docs" className="text-sm font-medium hover:text-primary transition-colors" data-testid="link-docs">
+              Docs
+            </a>
+            <ThemeToggle />
+            <Button onClick={() => setLocation("/login")} data-testid="button-get-started-header">
+              Get Started
+            </Button>
+          </nav>
+
+          {/* Mobile Theme Toggle - Right Side */}
+          <div className="flex md:hidden ml-auto">
             <ThemeToggle />
           </div>
         </div>

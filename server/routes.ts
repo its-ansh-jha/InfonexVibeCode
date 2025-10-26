@@ -691,7 +691,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
               res.write(`data: ${JSON.stringify({ type: 'tool_start', name: toolName, summary: startSummary })}\n\n`);
             }
 
-            // Execute MCP tool calls
+            // Execute tool calls
             try {
               if (toolName === 'create_boilerplate') {
                 const { type } = args;
@@ -953,7 +953,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
                 }
               }
             } catch (toolError: any) {
-              console.error(`MCP tool execution error (${toolName}):`, toolError);
+              console.error(`Tool execution error (${toolName}):`, toolError);
               if (clientConnected) {
                 res.write(`data: ${JSON.stringify({ type: 'error', message: toolError.message })}\n\n`);
               }
@@ -972,7 +972,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           res.write(`data: ${JSON.stringify({ type: 'actions_completed', actions: completedActions })}\n\n`);
         }
 
-        // Save assistant message with MCP tool calls and completed actions (even if client disconnected)
+        // Save assistant message with tool calls and completed actions (even if client disconnected)
         await storage.createMessage({
           projectId,
           role: "assistant",

@@ -45,7 +45,7 @@ export const messages = pgTable("messages", {
   projectId: varchar("project_id").notNull().references(() => projects.id, { onDelete: "cascade" }),
   role: text("role").notNull(), // 'user' or 'assistant'
   content: text("content").notNull(),
-  toolCalls: jsonb("tool_calls"), // AI MCP tool calls metadata
+  toolCalls: jsonb("tool_calls"), // AI tool calls metadata
   actions: jsonb("actions"), // Real-time action steps the AI performs
   attachments: jsonb("attachments"), // Image/file attachments (URLs to S3)
   createdAt: timestamp("created_at").defaultNow().notNull(),

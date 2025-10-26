@@ -152,7 +152,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
     }
 
     default:
-      throw new Error(`Unknown MCP tool: ${request.params.name}`);
+      throw new Error(`Unknown tool: ${request.params.name}`);
   }
 });
 

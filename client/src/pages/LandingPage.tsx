@@ -1,6 +1,6 @@
 import { useState } from "react";
-import { Link, useLocation } from "wouter";
-import { Code2, Sparkles, FileCode, Terminal, Cloud, Zap, Menu, X, BookOpen, HelpCircle, Shield, Users } from "lucide-react";
+import { useLocation } from "wouter";
+import { Code2, Sparkles, FileCode, Terminal, Cloud, Zap, Menu, BookOpen, HelpCircle, Shield } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";

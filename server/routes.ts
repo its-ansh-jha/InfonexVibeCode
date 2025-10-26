@@ -158,11 +158,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const files = await storage.getFilesByProjectId(req.params.projectId);
       const project = await storage.getProject(req.params.projectId);
 
-      if (!files || files.length === 0) {
-        return res.status(404).json({ error: "No files found" });
-      }
-
-      // Create JSON structure of all files
+      // Create JSON structure of all files (empty if no files)
       const fileContents: Record<string, string> = {};
       for (const file of files) {
         try {
@@ -176,6 +172,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const downloadData = {
         projectName: project?.name || 'project',
         files: fileContents,
+        filesCount: files.length,
         exportedAt: new Date().toISOString(),
       };
 

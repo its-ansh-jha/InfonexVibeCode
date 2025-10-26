@@ -116,6 +116,13 @@ export default function PreviewPage() {
 
   const handleRefresh = async () => {
     setIsRefreshing(true);
+    
+    // Reload the iframe
+    const iframe = document.querySelector('[data-testid="iframe-preview"]') as HTMLIFrameElement;
+    if (iframe) {
+      iframe.src = iframe.src;
+    }
+    
     await Promise.all([refetchProject(), refetchSandbox()]);
     setIsRefreshing(false);
     toast({

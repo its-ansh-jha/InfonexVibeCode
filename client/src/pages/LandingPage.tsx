@@ -47,7 +47,7 @@ export default function LandingPage() {
     {
       title: "Advanced AI Chat Agent",
       items: [
-        "Powered by Google Gemini 2.5 Flash Preview model",
+        "Powered by InfonexAgent AI model",
         "Streaming responses with live MCP tool execution feedback",
         "Real-time action tracking with visual progress indicators",
         "Proactive web search for documentation and best practices",
@@ -376,7 +376,7 @@ export default function LandingPage() {
                     <div className="flex items-center justify-center w-5 h-5 rounded-full bg-primary/10 mt-0.5 shrink-0">
                       <div className="w-2 h-2 rounded-full bg-primary" />
                     </div>
-                    Google Gemini 2.5 Flash Preview for advanced AI capabilities
+                    InfonexAgent AI for advanced AI capabilities
                   </li>
                   <li className="flex items-start gap-2 text-muted-foreground">
                     <div className="flex items-center justify-center w-5 h-5 rounded-full bg-primary/10 mt-0.5 shrink-0">

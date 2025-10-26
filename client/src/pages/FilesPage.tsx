@@ -1,6 +1,6 @@
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation } from "@tanstack/react-query";
 import { useParams } from "wouter";
-import { FileText, Folder, Loader2, Code2, File as FileIcon, Download, Search } from "lucide-react";
+import { FileText, Folder, Loader2, Code2, File as FileIcon, Download, Search, Edit, Trash2, FileType, ArrowLeft, Save } from "lucide-react";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
@@ -11,17 +11,176 @@ import type { File } from "@shared/schema";
 import { formatDistanceToNow } from "date-fns";
 import { cn } from "@/lib/utils";
 import { auth } from "@/lib/firebase";
+import Editor from "@monaco-editor/react";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
+import { queryClient, apiRequest } from "@/lib/queryClient";
 
 export default function FilesPage() {
   const { id: projectId } = useParams();
   const [searchQuery, setSearchQuery] = useState("");
+  const [editingFile, setEditingFile] = useState<File | null>(null);
+  const [fileContent, setFileContent] = useState("");
+  const [deleteFile, setDeleteFile] = useState<File | null>(null);
+  const [renameFile, setRenameFile] = useState<File | null>(null);
+  const [newFileName, setNewFileName] = useState("");
+  const [isLoadingContent, setIsLoadingContent] = useState(false);
   const { toast } = useToast();
 
   const { data: files, isLoading } = useQuery<File[]>({
     queryKey: ["/api/files", projectId],
     enabled: !!projectId,
-    refetchInterval: 5000, // Refresh every 5 seconds
+    refetchInterval: 5000,
   });
+
+  const deleteMutation = useMutation({
+    mutationFn: async (fileId: string) => {
+      await apiRequest(`/api/files/${fileId}`, {
+        method: "DELETE",
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/files", projectId] });
+      toast({
+        title: "File deleted",
+        description: "File has been deleted from S3 and E2B sandbox",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Delete failed",
+        description: error.message || "Failed to delete file",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const renameMutation = useMutation({
+    mutationFn: async ({ fileId, newPath }: { fileId: string; newPath: string }) => {
+      const response = await apiRequest(`/api/files/${fileId}/rename`, {
+        method: "PATCH",
+        body: JSON.stringify({ newPath }),
+        headers: { "Content-Type": "application/json" },
+      });
+      return response;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/files", projectId] });
+      toast({
+        title: "File renamed",
+        description: "File has been renamed in S3 and E2B sandbox",
+      });
+      setRenameFile(null);
+      setNewFileName("");
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Rename failed",
+        description: error.message || "Failed to rename file",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const updateContentMutation = useMutation({
+    mutationFn: async ({ fileId, content }: { fileId: string; content: string }) => {
+      const response = await apiRequest(`/api/files/${fileId}/content`, {
+        method: "PATCH",
+        body: JSON.stringify({ content }),
+        headers: { "Content-Type": "application/json" },
+      });
+      return response;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/files", projectId] });
+      toast({
+        title: "File saved",
+        description: "File has been saved to S3 and E2B sandbox",
+      });
+      setEditingFile(null);
+      setFileContent("");
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Save failed",
+        description: error.message || "Failed to save file",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const handleEdit = async (file: File) => {
+    setIsLoadingContent(true);
+    try {
+      const idToken = await auth.currentUser?.getIdToken();
+      const response = await fetch(`/api/files/${projectId}/${encodeURIComponent(file.path)}`, {
+        headers: {
+          "Authorization": `Bearer ${idToken}`,
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to load file content");
+      }
+
+      const content = await response.text();
+      setFileContent(content);
+      setEditingFile(file);
+    } catch (error: any) {
+      toast({
+        title: "Load failed",
+        description: error.message || "Failed to load file content",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoadingContent(false);
+    }
+  };
+
+  const handleSave = () => {
+    if (editingFile) {
+      updateContentMutation.mutate({ fileId: editingFile.id, content: fileContent });
+    }
+  };
+
+  const handleDelete = (file: File) => {
+    setDeleteFile(file);
+  };
+
+  const confirmDelete = () => {
+    if (deleteFile) {
+      deleteMutation.mutate(deleteFile.id);
+      setDeleteFile(null);
+    }
+  };
+
+  const handleRename = (file: File) => {
+    setRenameFile(file);
+    setNewFileName(file.path);
+  };
+
+  const confirmRename = () => {
+    if (renameFile && newFileName && newFileName !== renameFile.path) {
+      renameMutation.mutate({ fileId: renameFile.id, newPath: newFileName });
+    }
+  };
 
   const handleDownloadAll = async () => {
     try {
@@ -78,6 +237,27 @@ export default function FilesPage() {
     return <FileText className="h-4 w-4 text-muted-foreground" />;
   };
 
+  const getLanguageFromPath = (path: string): string => {
+    const ext = path.split('.').pop()?.toLowerCase();
+    const languageMap: Record<string, string> = {
+      'js': 'javascript',
+      'jsx': 'javascript',
+      'ts': 'typescript',
+      'tsx': 'typescript',
+      'py': 'python',
+      'html': 'html',
+      'css': 'css',
+      'json': 'json',
+      'md': 'markdown',
+      'yaml': 'yaml',
+      'yml': 'yaml',
+      'xml': 'xml',
+      'sh': 'shell',
+      'bash': 'shell',
+    };
+    return languageMap[ext || ''] || 'plaintext';
+  };
+
   const formatFileSize = (bytes: number | null) => {
     if (!bytes) return '0 B';
     const k = 1024;
@@ -98,9 +278,74 @@ export default function FilesPage() {
     );
   }
 
+  if (editingFile) {
+    return (
+      <div className="flex flex-col h-full">
+        <div className="flex items-center justify-between p-4 border-b bg-background">
+          <div className="flex items-center gap-3">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => {
+                setEditingFile(null);
+                setFileContent("");
+              }}
+              data-testid="button-back-editor"
+            >
+              <ArrowLeft className="h-4 w-4 mr-2" />
+              Back
+            </Button>
+            <div className="flex items-center gap-2">
+              {getFileIcon(editingFile.path)}
+              <span className="font-mono text-sm">{editingFile.path}</span>
+            </div>
+          </div>
+          <Button
+            onClick={handleSave}
+            disabled={updateContentMutation.isPending}
+            data-testid="button-save-file"
+          >
+            {updateContentMutation.isPending ? (
+              <>
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                Saving...
+              </>
+            ) : (
+              <>
+                <Save className="h-4 w-4 mr-2" />
+                Save
+              </>
+            )}
+          </Button>
+        </div>
+        <div className="flex-1 overflow-hidden">
+          {isLoadingContent ? (
+            <div className="flex items-center justify-center h-full">
+              <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+            </div>
+          ) : (
+            <Editor
+              height="100%"
+              language={getLanguageFromPath(editingFile.path)}
+              value={fileContent}
+              onChange={(value) => setFileContent(value || "")}
+              theme="vs-dark"
+              options={{
+                minimap: { enabled: false },
+                fontSize: 14,
+                lineNumbers: "on",
+                scrollBeyondLastLine: false,
+                automaticLayout: true,
+              }}
+            />
+          )}
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="p-3 sm:p-4 md:p-8 space-y-4 sm:space-y-6 pb-28 md:pb-8">
-      {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4">
         <div className="flex-1 min-w-0">
           <h1 className="text-2xl sm:text-3xl font-semibold truncate">Files</h1>
@@ -119,6 +364,7 @@ export default function FilesPage() {
               onClick={handleDownloadAll}
               className="shrink-0"
               title="Download all files"
+              data-testid="button-download-all"
             >
               <Download className="h-4 w-4 mr-2" />
               Download
@@ -127,7 +373,6 @@ export default function FilesPage() {
         </div>
       </div>
 
-      {/* Search Bar */}
       {files && files.length > 0 && (
         <div className="relative">
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -148,7 +393,7 @@ export default function FilesPage() {
             Project Files
           </CardTitle>
           <CardDescription className="text-xs sm:text-sm">
-            Files are automatically saved when the AI creates or edits them
+            Files are automatically saved when the AI creates or edits them. You can also manually edit, rename, or delete files.
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -158,8 +403,7 @@ export default function FilesPage() {
                 <div
                   key={file.id}
                   className={cn(
-                    "flex items-center justify-between p-2 sm:p-3 rounded-lg hover:bg-muted transition-colors border border-border",
-                    "active:bg-muted/80 cursor-pointer"
+                    "flex items-center justify-between p-2 sm:p-3 rounded-lg hover:bg-muted transition-colors border border-border"
                   )}
                   data-testid={`file-item-${file.id}`}
                 >
@@ -172,9 +416,38 @@ export default function FilesPage() {
                       </p>
                     </div>
                   </div>
-                  <Badge variant="secondary" className="shrink-0 text-[10px] sm:text-xs px-1.5 sm:px-2">
-                    {file.path.split('.').pop()?.toUpperCase() || 'FILE'}
-                  </Badge>
+                  <div className="flex items-center gap-1 sm:gap-2 shrink-0">
+                    <Badge variant="secondary" className="text-[10px] sm:text-xs px-1.5 sm:px-2">
+                      {file.path.split('.').pop()?.toUpperCase() || 'FILE'}
+                    </Badge>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => handleEdit(file)}
+                      title="Edit file"
+                      data-testid={`button-edit-${file.id}`}
+                    >
+                      <Edit className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => handleRename(file)}
+                      title="Rename file"
+                      data-testid={`button-rename-${file.id}`}
+                    >
+                      <FileType className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => handleDelete(file)}
+                      title="Delete file"
+                      data-testid={`button-delete-${file.id}`}
+                    >
+                      <Trash2 className="h-4 w-4 text-destructive" />
+                    </Button>
+                  </div>
                 </div>
               ))}
             </div>
@@ -201,6 +474,76 @@ export default function FilesPage() {
           )}
         </CardContent>
       </Card>
+
+      <AlertDialog open={!!deleteFile} onOpenChange={(open) => !open && setDeleteFile(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete File</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete <span className="font-mono font-semibold">{deleteFile?.path}</span>? This will remove it from S3 storage and E2B sandbox. This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel data-testid="button-cancel-delete">Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={confirmDelete}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              data-testid="button-confirm-delete"
+            >
+              {deleteMutation.isPending ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Deleting...
+                </>
+              ) : (
+                "Delete"
+              )}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <Dialog open={!!renameFile} onOpenChange={(open) => !open && setRenameFile(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Rename File</DialogTitle>
+            <DialogDescription>
+              Enter a new name for the file. This will update it in S3 storage and E2B sandbox.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="new-filename">File path</Label>
+              <Input
+                id="new-filename"
+                value={newFileName}
+                onChange={(e) => setNewFileName(e.target.value)}
+                placeholder="src/App.tsx"
+                data-testid="input-new-filename"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setRenameFile(null)} data-testid="button-cancel-rename">
+              Cancel
+            </Button>
+            <Button
+              onClick={confirmRename}
+              disabled={!newFileName || newFileName === renameFile?.path || renameMutation.isPending}
+              data-testid="button-confirm-rename"
+            >
+              {renameMutation.isPending ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Renaming...
+                </>
+              ) : (
+                "Rename"
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

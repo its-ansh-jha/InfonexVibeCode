@@ -130,7 +130,7 @@ export default function FilesPage() {
     setIsLoadingContent(true);
     try {
       const idToken = await auth.currentUser?.getIdToken();
-      const response = await fetch(`/api/files/${projectId}/${encodeURIComponent(file.path)}`, {
+      const response = await fetch(`/api/files/${projectId}/${file.id}`, {
         headers: {
           "Authorization": `Bearer ${idToken}`,
         },
@@ -140,8 +140,8 @@ export default function FilesPage() {
         throw new Error("Failed to load file content");
       }
 
-      const content = await response.text();
-      setFileContent(content);
+      const data = await response.json();
+      setFileContent(data.content);
       setEditingFile(file);
     } catch (error: any) {
       toast({

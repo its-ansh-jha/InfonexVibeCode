@@ -621,6 +621,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
               } else if (toolName === 'write_file') {
                 const { path, content } = args;
 
+                // Block AI from creating vite.config files
+                if (path.match(/vite\.config\.(js|ts|mjs|cjs)$/i)) {
+                  const summary = `Skipped ${path} (pre-configured in boilerplate)`;
+                  toolCalls.push({ name: toolName, arguments: args, summary });
+                  if (clientConnected) {
+                    res.write(`data: ${JSON.stringify({ type: 'tool_complete', name: toolName, summary })}\n\n`);
+                  }
+                  continue;
+                }
+
                 // Upload to S3
                 const s3Key = await uploadFileToS3(projectId, path, content);
 
@@ -651,6 +661,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
               } else if (toolName === 'edit_file') {
                 const { path, old_str, new_str } = args;
 
+                // Block AI from editing vite.config files
+                if (path.match(/vite\.config\.(js|ts|mjs|cjs)$/i)) {
+                  const summary = `Skipped editing ${path} (pre-configured in boilerplate)`;
+                  toolCalls.push({ name: toolName, arguments: args, summary });
+                  if (clientConnected) {
+                    res.write(`data: ${JSON.stringify({ type: 'tool_complete', name: toolName, summary })}\n\n`);
+                  }
+                  continue;
+                }
+
                 // Get existing file
                 const existingFile = await storage.getFileByPath(projectId, path);
                 if (!existingFile) {
@@ -676,6 +696,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
                 }
               } else if (toolName === 'delete_file') {
                 const { path } = args;
+
+                // Block AI from deleting vite.config files
+                if (path.match(/vite\.config\.(js|ts|mjs|cjs)$/i)) {
+                  const summary = `Skipped deleting ${path} (required system file)`;
+                  toolCalls.push({ name: toolName, arguments: args, summary });
+                  if (clientConnected) {
+                    res.write(`data: ${JSON.stringify({ type: 'tool_complete', name: toolName, summary })}\n\n`);
+                  }
+                  continue;
+                }
 
                 let deletionStatus = { s3: false, sandbox: false, database: false };
                 let summary = `Deleted ${path}`;

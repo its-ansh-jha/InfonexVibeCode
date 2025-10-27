@@ -68,11 +68,11 @@ export default function PreviewPage() {
     // Check immediately
     validateSandbox();
 
-    // Check every 30 seconds
-    const interval = setInterval(validateSandbox, 30000);
+    // Check every 5 seconds to catch new files quickly
+    const interval = setInterval(validateSandbox, 5000);
 
     return () => clearInterval(interval);
-  }, [projectId, project?.sandboxId]);
+  }, [projectId, project?.sandboxId, toast]);
 
   // Mark sandbox as expired if iframe error is detected
   useEffect(() => {
@@ -91,7 +91,7 @@ export default function PreviewPage() {
 
   // Use override URL if set (during sandbox recreation), otherwise use DB values
   let previewUrl = overrideUrl || project?.sandboxUrl || sandboxData?.url;
-  
+
   // Add refresh timestamp to URL when refreshKey changes (for auto-refresh)
   if (previewUrl && refreshKey > 0) {
     try {
@@ -102,7 +102,7 @@ export default function PreviewPage() {
       // If URL parsing fails, use original URL
     }
   }
-  
+
   const hasSandbox = !!project?.sandboxId;
 
   const handleCopyUrl = () => {
@@ -149,7 +149,7 @@ export default function PreviewPage() {
 
   const handleRefresh = async () => {
     setIsRefreshing(true);
-    
+
     // Reload the iframe by adding a timestamp to force refresh
     const iframe = document.querySelector('[data-testid="iframe-preview"]') as HTMLIFrameElement;
     if (iframe && previewUrl) {
@@ -157,7 +157,7 @@ export default function PreviewPage() {
       url.searchParams.set('_refresh', Date.now().toString());
       iframe.src = url.toString();
     }
-    
+
     await Promise.all([refetchProject(), refetchSandbox()]);
     setIsRefreshing(false);
     toast({
@@ -309,7 +309,7 @@ export default function PreviewPage() {
           )}
         </div>
       </div>
-      
+
       {/* Preview container */}
       <div className="flex-1 flex items-center justify-center p-2 sm:p-4">
         {previewUrl ? (

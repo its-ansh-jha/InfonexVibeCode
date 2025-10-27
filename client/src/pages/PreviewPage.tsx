@@ -198,33 +198,18 @@ export default function PreviewPage() {
           description: data.workflowCommand,
         });
 
-        // Show "Restarting The App" message after 1 second
+        // Show message to refresh manually
         setTimeout(() => {
           toast({
-            title: "Restarting The App",
-            description: "Auto-refresh will run for 8 seconds",
+            title: "App is starting",
+            description: "Refresh the preview 2-3 times to see your app",
           });
         }, 1000);
 
-        // Wait 2 seconds before starting auto-refresh to let the workflow command start
+        // Clear override URL after a short delay
         setTimeout(() => {
-          // Start auto-refresh cycle for 8 seconds to give the server time to start
-          const refreshInterval = setInterval(() => {
-            // Force iframe reload by incrementing key
-            setRefreshKey(prev => prev + 1);
-          }, 1000); // Refresh every second
-
-          // Stop auto-refresh after 8 seconds and clear override URL
-          setTimeout(() => {
-            clearInterval(refreshInterval);
-            // Clear override URL so it uses the DB value from now on
-            setOverrideUrl(null);
-            toast({
-              title: "Preview ready",
-              description: "Auto-refresh stopped",
-            });
-          }, 8000);
-        }, 2000);
+          setOverrideUrl(null);
+        }, 3000);
       } else {
         // If no workflow command, clear override after 3 seconds
         setTimeout(() => {

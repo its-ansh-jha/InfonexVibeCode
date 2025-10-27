@@ -20,6 +20,7 @@ export default function PreviewPage() {
   const [isRunningCommand, setIsRunningCommand] = useState(false);
   const [overrideUrl, setOverrideUrl] = useState<string | null>(null);
   const [refreshKey, setRefreshKey] = useState(0);
+  const [iframeError, setIframeError] = useState(false);
 
   const { data: project, isLoading: projectLoading, refetch: refetchProject } = useQuery<Project>({
     queryKey: ["/api/projects", projectId],
@@ -72,6 +73,13 @@ export default function PreviewPage() {
 
     return () => clearInterval(interval);
   }, [projectId, project?.sandboxId]);
+
+  // Mark sandbox as expired if iframe error is detected
+  useEffect(() => {
+    if (iframeError) {
+      setSandboxExpired(true);
+    }
+  }, [iframeError]);
 
   if (projectLoading) {
     return (
@@ -432,6 +440,7 @@ export default function PreviewPage() {
                 className="w-full h-full border-0"
                 title="App Preview"
                 data-testid="iframe-preview"
+                onError={() => setIframeError(true)}
               />
             </div>
           </div>

@@ -82,7 +82,19 @@ export default function PreviewPage() {
   }
 
   // Use override URL if set (during sandbox recreation), otherwise use DB values
-  const previewUrl = overrideUrl || project?.sandboxUrl || sandboxData?.url;
+  let previewUrl = overrideUrl || project?.sandboxUrl || sandboxData?.url;
+  
+  // Add refresh timestamp to URL when refreshKey changes (for auto-refresh)
+  if (previewUrl && refreshKey > 0) {
+    try {
+      const url = new URL(previewUrl);
+      url.searchParams.set('_refresh', Date.now().toString());
+      previewUrl = url.toString();
+    } catch (e) {
+      // If URL parsing fails, use original URL
+    }
+  }
+  
   const hasSandbox = !!project?.sandboxId;
 
   const handleCopyUrl = () => {

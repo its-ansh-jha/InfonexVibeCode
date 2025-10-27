@@ -180,24 +180,30 @@ export default function PreviewPage() {
           description: data.workflowCommand,
         });
 
-        // Start auto-refresh cycle for 5 seconds
-        const refreshInterval = setInterval(() => {
-          const iframe = document.querySelector('[data-testid="iframe-preview"]') as HTMLIFrameElement;
-          if (iframe && previewUrl) {
-            const url = new URL(previewUrl);
-            url.searchParams.set('_refresh', Date.now().toString());
-            iframe.src = url.toString();
-          }
-        }, 1000); // Refresh every second
+        // Use the NEW sandbox URL from the API response
+        const newSandboxUrl = data.url;
 
-        // Stop auto-refresh after 5 seconds
+        // Wait 2 seconds before starting auto-refresh to let the workflow command start
         setTimeout(() => {
-          clearInterval(refreshInterval);
-          toast({
-            title: "Preview ready",
-            description: "Auto-refresh stopped",
-          });
-        }, 5000);
+          // Start auto-refresh cycle for 8 seconds to give the server time to start
+          const refreshInterval = setInterval(() => {
+            const iframe = document.querySelector('[data-testid="iframe-preview"]') as HTMLIFrameElement;
+            if (iframe && newSandboxUrl) {
+              const url = new URL(newSandboxUrl);
+              url.searchParams.set('_refresh', Date.now().toString());
+              iframe.src = url.toString();
+            }
+          }, 1000); // Refresh every second
+
+          // Stop auto-refresh after 8 seconds
+          setTimeout(() => {
+            clearInterval(refreshInterval);
+            toast({
+              title: "Preview ready",
+              description: "Auto-refresh stopped",
+            });
+          }, 8000);
+        }, 2000);
       }
     } catch (error: any) {
       toast({

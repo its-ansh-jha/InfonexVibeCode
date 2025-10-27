@@ -186,6 +186,14 @@ export default function PreviewPage() {
           description: data.workflowCommand,
         });
 
+        // Show "Restarting The App" message after 1 second
+        setTimeout(() => {
+          toast({
+            title: "Restarting The App",
+            description: "Auto-refresh will run for 10 seconds",
+          });
+        }, 1000);
+
         // Wait 2 seconds before starting auto-refresh to let the workflow command start
         setTimeout(() => {
           // Start auto-refresh cycle for 10 seconds to give the server time to start

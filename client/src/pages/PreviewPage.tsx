@@ -18,6 +18,8 @@ export default function PreviewPage() {
   const [sandboxExpired, setSandboxExpired] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [isRunningCommand, setIsRunningCommand] = useState(false);
+  const [overrideUrl, setOverrideUrl] = useState<string | null>(null);
+  const [refreshKey, setRefreshKey] = useState(0);
 
   const { data: project, isLoading: projectLoading, refetch: refetchProject } = useQuery<Project>({
     queryKey: ["/api/projects", projectId],
@@ -79,7 +81,8 @@ export default function PreviewPage() {
     );
   }
 
-  const previewUrl = project?.sandboxUrl || sandboxData?.url;
+  // Use override URL if set (during sandbox recreation), otherwise use DB values
+  const previewUrl = overrideUrl || project?.sandboxUrl || sandboxData?.url;
   const hasSandbox = !!project?.sandboxId;
 
   const handleCopyUrl = () => {
@@ -160,11 +163,14 @@ export default function PreviewPage() {
 
       const data = await response.json();
 
-      // Invalidate and refetch project data
-      await queryClient.invalidateQueries({ queryKey: ["/api/projects", projectId] });
-      await queryClient.invalidateQueries({ queryKey: ["/api/sandbox", projectId, "url"] });
-      await refetchProject();
-      await refetchSandbox();
+      // IMMEDIATELY set the new sandbox URL to prevent showing old sandbox
+      setOverrideUrl(data.url);
+
+      // Invalidate and refetch project data in the background
+      queryClient.invalidateQueries({ queryKey: ["/api/projects", projectId] });
+      queryClient.invalidateQueries({ queryKey: ["/api/sandbox", projectId, "url"] });
+      refetchProject();
+      refetchSandbox();
 
       setSandboxExpired(false);
 
@@ -180,30 +186,30 @@ export default function PreviewPage() {
           description: data.workflowCommand,
         });
 
-        // Use the NEW sandbox URL from the API response
-        const newSandboxUrl = data.url;
-
         // Wait 2 seconds before starting auto-refresh to let the workflow command start
         setTimeout(() => {
-          // Start auto-refresh cycle for 8 seconds to give the server time to start
+          // Start auto-refresh cycle for 10 seconds to give the server time to start
           const refreshInterval = setInterval(() => {
-            const iframe = document.querySelector('[data-testid="iframe-preview"]') as HTMLIFrameElement;
-            if (iframe && newSandboxUrl) {
-              const url = new URL(newSandboxUrl);
-              url.searchParams.set('_refresh', Date.now().toString());
-              iframe.src = url.toString();
-            }
+            // Force iframe reload by incrementing key
+            setRefreshKey(prev => prev + 1);
           }, 1000); // Refresh every second
 
-          // Stop auto-refresh after 8 seconds
+          // Stop auto-refresh after 10 seconds and clear override URL
           setTimeout(() => {
             clearInterval(refreshInterval);
+            // Clear override URL so it uses the DB value from now on
+            setOverrideUrl(null);
             toast({
               title: "Preview ready",
               description: "Auto-refresh stopped",
             });
-          }, 8000);
+          }, 10000);
         }, 2000);
+      } else {
+        // If no workflow command, clear override after 3 seconds
+        setTimeout(() => {
+          setOverrideUrl(null);
+        }, 3000);
       }
     } catch (error: any) {
       toast({
@@ -211,6 +217,7 @@ export default function PreviewPage() {
         description: error.message,
         variant: "destructive",
       });
+      setOverrideUrl(null);
     } finally {
       setIsRecreating(false);
     }
@@ -415,6 +422,7 @@ export default function PreviewPage() {
             {/* Iframe */}
             <div className="flex-1 overflow-hidden">
               <iframe
+                key={`preview-${refreshKey}`}
                 src={previewUrl}
                 className="w-full h-full border-0"
                 title="App Preview"

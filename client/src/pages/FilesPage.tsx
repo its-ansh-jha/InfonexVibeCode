@@ -12,6 +12,7 @@ import { formatDistanceToNow } from "date-fns";
 import { cn } from "@/lib/utils";
 import { auth } from "@/lib/firebase";
 import Editor from "@monaco-editor/react";
+import JSZip from "jszip";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -188,6 +189,11 @@ export default function FilesPage() {
 
   const handleDownloadAll = async () => {
     try {
+      toast({
+        title: "Preparing download",
+        description: "Creating ZIP file...",
+      });
+
       const idToken = await auth.currentUser?.getIdToken();
       const response = await fetch(`/api/files/${projectId}/download`, {
         headers: {
@@ -200,19 +206,31 @@ export default function FilesPage() {
       }
 
       const data = await response.json();
-      const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
-      const url = window.URL.createObjectURL(blob);
+      
+      // Create a new ZIP file
+      const zip = new JSZip();
+      
+      // Add each file to the ZIP
+      for (const [filePath, fileContent] of Object.entries(data.files)) {
+        zip.file(filePath, fileContent as string);
+      }
+      
+      // Generate the ZIP file
+      const zipBlob = await zip.generateAsync({ type: 'blob' });
+      
+      // Download the ZIP file
+      const url = window.URL.createObjectURL(zipBlob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `${data.projectName || 'project'}-source.json`;
+      a.download = `${data.projectName || 'project'}-source.zip`;
       document.body.appendChild(a);
       a.click();
       window.URL.revokeObjectURL(url);
       document.body.removeChild(a);
 
       toast({
-        title: "Download started",
-        description: "All files are being downloaded",
+        title: "Download complete",
+        description: `Downloaded ${data.filesCount} files as ZIP`,
       });
     } catch (error) {
       toast({

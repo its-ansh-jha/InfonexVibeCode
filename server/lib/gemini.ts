@@ -93,14 +93,14 @@ export async function* chatWithAIStream(
     if (content) {
       fullContent += content;
       buffer += content;
-      
+
       // Parse and emit action events in real-time
       const actionMatches = parseActionsFromBuffer(buffer);
       for (const action of actionMatches.actions) {
         yield { type: 'action', data: action };
       }
       buffer = actionMatches.remaining;
-      
+
       // Yield text content
       yield { type: 'text', content };
     }
@@ -129,12 +129,12 @@ interface ActionMatch {
 function parseActionsFromBuffer(buffer: string, isFinal: boolean = false): { actions: ActionMatch[], remaining: string } {
   const actions: ActionMatch[] = [];
   let remaining = buffer;
-  
+
   // Match action patterns like: [action:description]
   const actionPattern = /\[action:(.*?)\]/g;
   let match;
   let lastIndex = 0;
-  
+
   while ((match = actionPattern.exec(buffer)) !== null) {
     const description = match[1].trim();
     if (description) {
@@ -145,7 +145,7 @@ function parseActionsFromBuffer(buffer: string, isFinal: boolean = false): { act
     }
     lastIndex = match.index + match[0].length;
   }
-  
+
   // Keep the part after the last complete match in the buffer
   if (!isFinal && lastIndex > 0) {
     // Check if there's a partial match at the end
@@ -158,7 +158,7 @@ function parseActionsFromBuffer(buffer: string, isFinal: boolean = false): { act
   } else if (isFinal) {
     remaining = "";
   }
-  
+
   return { actions, remaining };
 }
 
@@ -174,7 +174,7 @@ function parseToolCalls(content: string): ToolCall[] {
     try {
       const toolName = match[1];
       let jsonStr = match[2].trim();
-      
+
       // Try to find the complete JSON object by counting braces
       let braceCount = 0;
       let jsonEnd = 0;
@@ -186,11 +186,11 @@ function parseToolCalls(content: string): ToolCall[] {
           break;
         }
       }
-      
+
       if (jsonEnd > 0) {
         jsonStr = jsonStr.substring(0, jsonEnd);
       }
-      
+
       const args = JSON.parse(jsonStr);
       tools.push({ name: toolName, arguments: args });
     } catch (e) {
@@ -266,10 +266,15 @@ CRITICAL RULES:
 11. FILE NAMING: Use PascalCase for React component files (App.tsx, Button.tsx). ALWAYS match exact filenames when editing - if you created "app.jsx", edit "app.jsx" not "App.jsx". Use list_files to verify exact filenames before editing
 12. USE GOOGLE SEARCH PROACTIVELY: When you need to know how to use a library, check documentation, find best practices, or solve technical problems - just ask naturally and Google Search will provide real-time information DURING your work (not after)
 13. Shell commands auto-forward results back to you - you'll see stdout/stderr automatically after execution
-14. Important: Always perform the real MCP tool call then only use the action MCP tool - never use the action MCP tool before creating that file or running that command
+14. Shell commands auto-forward results back to you - you'll see stdout/stderr automatically after execution
 15. AUTONOMOUS DEBUGGING: If something doesn't work, proactively search for solutions, check error messages, and fix issues without waiting for user input
 16. Always when starts a app instead of running npm run dev command run the command (npm install;npm run dev) dont separate these commands make it always run in a single request both commands.
 17. BOILERPLATE MCP TOOL USAGE: When starting a NEW React project or the user wants a fresh React+Vite setup, use create_boilerplate FIRST instead of manually creating individual files. This creates a complete, properly configured project in one step. Then modify the files as needed.
+18. PACKAGE MANAGEMENT: When you need to use a new npm package (like react-router-dom, axios, etc.), you MUST:
+    a) First update package.json using write_file or edit_file to add the package to "dependencies" or "devDependencies"
+    b) Then run "npm install" using run_shell to install the package
+    c) Only after installation, create/edit files that import that package
+    Example: For react-router-dom, add it to package.json dependencies, run npm install, then create App.tsx with imports
 
 === E2B SANDBOX DOCUMENTATION ===
 

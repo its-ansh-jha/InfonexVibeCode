@@ -45,6 +45,12 @@ export default function PreviewPage() {
         }
 
         const idToken = await auth.currentUser?.getIdToken();
+        if (!idToken) {
+          console.error('No auth token available');
+          setSandboxExpired(true);
+          return;
+        }
+
         const response = await fetch(`/api/sandbox/${projectId}/validate`, {
           headers: {
             "Authorization": `Bearer ${idToken}`,
@@ -55,7 +61,8 @@ export default function PreviewPage() {
           const data = await response.json();
           setSandboxExpired(!data.isValid);
         } else {
-          // If validation endpoint fails, assume expired
+          // If validation endpoint fails (401, 403, 500, etc.), assume expired
+          console.error('Sandbox validation failed with status:', response.status);
           setSandboxExpired(true);
         }
       } catch (error) {
@@ -72,14 +79,15 @@ export default function PreviewPage() {
     const interval = setInterval(validateSandbox, 5000);
 
     return () => clearInterval(interval);
-  }, [projectId, project?.sandboxId, toast]);
+  }, [projectId, project?.sandboxId]);
 
   // Mark sandbox as expired if iframe error is detected
   useEffect(() => {
-    if (iframeError) {
+    if (iframeError && project?.sandboxId) {
+      console.log('Iframe error detected, marking sandbox as expired');
       setSandboxExpired(true);
     }
-  }, [iframeError]);
+  }, [iframeError, project?.sandboxId]);
 
   if (projectLoading) {
     return (

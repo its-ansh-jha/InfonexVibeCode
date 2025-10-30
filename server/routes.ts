@@ -655,10 +655,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const aiMessages = previousMessages.map(msg => {
         let messageContent = msg.content;
         
-        // If message has image attachments, include them in the content
+        // If message has image attachments, include image URLs for AI to reference
         if (msg.attachments && Array.isArray(msg.attachments) && msg.attachments.length > 0) {
-          const imagesList = msg.attachments.map((att: any) => `[Image: ${att.url}]`).join('\n');
-          messageContent = `${msg.content}\n\nAttached Images:\n${imagesList}`;
+          const imagesList = msg.attachments.map((att: any) => {
+            if (typeof att === 'string') {
+              return `Image URL: ${att}`;
+            } else if (att.url) {
+              return `Image URL: ${att.url}`;
+            }
+            return '';
+          }).filter(Boolean).join('\n');
+          
+          if (imagesList) {
+            messageContent = `${msg.content}\n\nUser provided the following images:\n${imagesList}\n\nPlease analyze these images and respond to the user's request.`;
+          }
         }
         
         return {
@@ -672,8 +682,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Include current attachments if provided
       if (attachments && Array.isArray(attachments) && attachments.length > 0) {
-        const imagesList = attachments.map((att: any) => `[Image: ${att.url}]`).join('\n');
-        userMessageWithContext = `${content}\n\nAttached Images:\n${imagesList}`;
+        const imagesList = attachments.map((att: any) => {
+          if (typeof att === 'string') {
+            return `Image URL: ${att}`;
+          } else if (att.url) {
+            return `Image URL: ${att.url}`;
+          }
+          return '';
+        }).filter(Boolean).join('\n');
+        
+        if (imagesList) {
+          userMessageWithContext = `${content}\n\nUser provided the following images:\n${imagesList}\n\nPlease analyze these images carefully and respond to the user's request based on what you see in the images.`;
+        }
       }
       
       // Add sandbox context

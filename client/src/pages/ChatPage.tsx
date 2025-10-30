@@ -765,25 +765,6 @@ export default function ChatPage() {
             )}
             
             <div className="flex gap-2 p-2">
-              <input
-                ref={fileInputRef}
-                type="file"
-                accept="image/*"
-                multiple
-                onChange={handleImageSelect}
-                className="hidden"
-              />
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => fileInputRef.current?.click()}
-                disabled={isStreaming || selectedImages.length >= 5}
-                className="h-10 w-10 shrink-0 hover:bg-muted"
-                title={selectedImages.length >= 5 ? "Maximum 5 images allowed" : "Upload images (max 5)"}
-                data-testid="button-upload-image"
-              >
-                <ImageIcon className="h-5 w-5" />
-              </Button>
               <Toggle
                 pressed={enableReasoning}
                 onPressedChange={setEnableReasoning}

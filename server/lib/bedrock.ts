@@ -27,7 +27,8 @@ const client = new BedrockRuntimeClient({
   },
 });
 
-const MODEL_ID = "anthropic.claude-sonnet-4-5-20250929-v1:0";
+// Use inference profile ARN for Claude Sonnet 4.5
+const MODEL_ID = "us.anthropic.claude-sonnet-4-5-20250929-v1:0";
 
 export async function* chatWithAIStream(
   messages: Message[],

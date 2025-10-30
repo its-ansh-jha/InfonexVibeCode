@@ -1,11 +1,12 @@
 import { useState, useRef, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useParams } from "wouter";
-import { Send, Bot, User as UserIcon, Loader2, Wrench, FileCode, Terminal, Play, Copy, Check, Sparkles, Image as ImageIcon, X, MessageSquare } from "lucide-react";
+import { Send, Bot, User as UserIcon, Loader2, Wrench, FileCode, Terminal, Play, Copy, Check, Sparkles, Image as ImageIcon, X, MessageSquare, Brain } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Toggle } from "@/components/ui/toggle";
 import { useToast } from "@/hooks/use-toast";
 import { queryClient } from "@/lib/queryClient";
 import { useAuth } from "@/hooks/useAuth";
@@ -290,9 +291,11 @@ export default function ChatPage() {
   const [input, setInput] = useState("");
   const [isStreaming, setIsStreaming] = useState(false);
   const [streamingMessage, setStreamingMessage] = useState("");
+  const [streamingThinking, setStreamingThinking] = useState("");
   const [streamingTools, setStreamingTools] = useState<ToolCall[]>([]);
   const [streamingActions, setStreamingActions] = useState<Action[]>([]);
   const [selectedImages, setSelectedImages] = useState<File[]>([]);
+  const [enableReasoning, setEnableReasoning] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -337,6 +340,7 @@ export default function ChatPage() {
     setSelectedImages([]);
     setIsStreaming(true);
     setStreamingMessage("");
+    setStreamingThinking("");
     setStreamingTools([]);
     setStreamingActions([]);
 
@@ -387,6 +391,7 @@ export default function ChatPage() {
           projectId,
           content: userMessage || "(Image uploaded)",
           attachments: attachments.length > 0 ? attachments : undefined,
+          enableReasoning,
         }),
       });
 
@@ -402,6 +407,7 @@ export default function ChatPage() {
       }
 
       let fullMessage = "";
+      let fullThinking = "";
       const tools: ToolCall[] = [];
       const actions: Action[] = [];
 
@@ -419,6 +425,9 @@ export default function ChatPage() {
             if (data.type === 'chunk') {
               fullMessage += data.content;
               setStreamingMessage(fullMessage);
+            } else if (data.type === 'thinking') {
+              fullThinking += data.content;
+              setStreamingThinking(fullThinking);
             } else if (data.type === 'action') {
               const action: Action = data.action;
               actions.push(action);
@@ -653,6 +662,17 @@ export default function ChatPage() {
                   <Bot className="h-4 w-4 sm:h-5 sm:w-5 text-primary" />
                 </div>
                 <div className="flex-1 space-y-2 min-w-0 max-w-full">
+                  {streamingThinking && (
+                    <Card className="p-3 sm:p-4 bg-muted/30 border-primary/20 overflow-hidden max-w-full shadow-sm">
+                      <div className="flex items-start gap-2 mb-2">
+                        <Brain className="h-4 w-4 text-primary mt-0.5 shrink-0" />
+                        <span className="text-xs font-semibold text-primary">Extended Thinking</span>
+                      </div>
+                      <div className="max-w-full overflow-hidden text-sm text-muted-foreground whitespace-pre-wrap">
+                        {streamingThinking}
+                      </div>
+                    </Card>
+                  )}
                   <Card className="p-3 sm:p-4 bg-card overflow-hidden max-w-full shadow-sm">
                     <div className="max-w-full overflow-hidden">
                       {streamingMessage ? (
@@ -757,6 +777,17 @@ export default function ChatPage() {
               >
                 <ImageIcon className="h-5 w-5" />
               </Button>
+              <Toggle
+                pressed={enableReasoning}
+                onPressedChange={setEnableReasoning}
+                disabled={isStreaming}
+                className="h-10 px-3 shrink-0 data-[state=on]:bg-primary data-[state=on]:text-primary-foreground"
+                title={enableReasoning ? "Reasoning mode enabled - AI will show its thinking process" : "Enable reasoning mode for complex tasks"}
+                data-testid="toggle-reasoning-mode"
+              >
+                <Brain className="h-5 w-5 mr-1.5" />
+                <span className="text-xs font-medium hidden sm:inline">Reasoning</span>
+              </Toggle>
               <Textarea
                 ref={textareaRef}
                 placeholder="Make, test, iterate..."

@@ -7,8 +7,9 @@ Vibe Code is an AI-powered app building platform that allows users to create app
 - **Firebase Authentication**: Google sign-in for user management
 - **Project Management**: Create and manage multiple app projects
 - **Advanced AI Chat Agent**: 
-  - Powered by Google's Gemini 2.5 Flash Preview model
+  - Powered by Anthropic's Claude Sonnet 4.5 via Amazon Bedrock
   - Streaming responses with live MCP tool execution feedback
+  - Extended thinking mode for complex reasoning tasks
   - Real-time action tracking with visual progress indicators
 - **AWS S3 Storage**: Secure file storage for all project files
 - **E2B Sandbox Integration**: Real-time code execution and preview in isolated sandboxes
@@ -41,8 +42,10 @@ Vibe Code is an AI-powered app building platform that allows users to create app
 ### Backend (Express + TypeScript)
 - **Database**: PostgreSQL with Drizzle ORM
 - **AI Integration**: 
-  - Google Gemini 2.5 Flash Preview (09-2025) model
-  - Streaming responses via SSE
+  - Anthropic Claude Sonnet 4.5 via Amazon Bedrock
+  - Model ID: anthropic.claude-sonnet-4-5-20250929-v1:0
+  - Streaming responses via SSE with thinking blocks
+  - Extended thinking mode for complex problem-solving
 - **File Storage**: AWS S3 for persistent file storage
 - **Code Execution**: E2B Code Interpreter SDK
 - **Web Search**: Serper API with proactive integration
@@ -86,13 +89,12 @@ Vibe Code is an AI-powered app building platform that allows users to create app
 - `VITE_FIREBASE_PROJECT_ID`: Firebase project ID
 - `VITE_FIREBASE_APP_ID`: Firebase app ID
 - `VITE_FIREBASE_API_KEY`: Firebase API key
-- `GEMINI_API_KEY`: Google Gemini API key from https://ai.google.dev/
-- `E2B_API_KEY`: E2B sandbox API key
-- `SERPER_API_KEY`: Serper web search API key
-- `AWS_ACCESS_KEY_ID`: AWS access key for S3
-- `AWS_SECRET_ACCESS_KEY`: AWS secret key for S3
+- `AWS_ACCESS_KEY_ID`: AWS access key for S3 and Bedrock
+- `AWS_SECRET_ACCESS_KEY`: AWS secret key for S3 and Bedrock
 - `AWS_REGION`: AWS region (e.g., us-east-1)
 - `AWS_S3_BUCKET_NAME`: S3 bucket name for file storage
+- `E2B_API_KEY`: E2B sandbox API key
+- `SERPER_API_KEY`: Serper web search API key
 - `DATABASE_URL`: PostgreSQL connection string
 
 ## User Flow
@@ -117,6 +119,25 @@ Vibe Code is an AI-powered app building platform that allows users to create app
 - **Interactions**: Subtle hover elevations, smooth transitions
 
 ## Recent Changes
+- **October 30, 2025** (Latest Session): Migration to Claude Sonnet 4.5 with Extended Thinking
+  - **AI Model Migration**: Switched from Google Gemini to Anthropic Claude Sonnet 4.5 via Amazon Bedrock
+    - Model: `anthropic.claude-sonnet-4-5-20250929-v1:0`
+    - Superior coding performance with 77.2% accuracy on SWE-bench Verified
+    - Enhanced agentic capabilities and tool handling
+    - 1M token context window for large codebases
+  - **Extended Thinking Mode**: New reasoning capability for complex tasks
+    - Toggle button in chat interface to enable/disable reasoning mode
+    - AI shows its step-by-step thinking process in real-time
+    - Streaming thinking blocks displayed separately from final response
+    - Configurable thinking budget (default 4096 tokens) for balancing speed and depth
+  - **Streaming Architecture**: Updated to handle Bedrock's streaming format
+    - Handles both text and thinking content blocks
+    - Real-time display of AI's reasoning process
+    - Improved error handling and connection resilience
+  - **UI Enhancements**: New Brain icon and toggle for reasoning mode
+    - Extended Thinking card displays reasoning process during streaming
+    - Visual distinction between thinking and response content
+    - Mobile-responsive reasoning mode toggle
 - **October 25, 2025** (Latest Session): Enhanced AI Capabilities & Command Tracking
   - **Boilerplate Creation MCP Tool**: AI can now create complete project structures with one command
     - `create_boilerplate` MCP tool for React+Vite projects with properly configured vite.config.ts

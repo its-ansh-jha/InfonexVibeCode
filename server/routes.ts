@@ -2,7 +2,7 @@ import type { Express, Request } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { requireAuth } from "./middleware/auth";
-import { chatWithAIStream, SYSTEM_PROMPT, getToolCallSummary } from "./lib/gemini";
+import { chatWithAIStream, SYSTEM_PROMPT, getToolCallSummary } from "./lib/bedrock";
 import { webSearch } from "./lib/serper";
 import { insertProjectSchema, insertMessageSchema, insertFileSchema } from "@shared/schema";
 import { uploadFileToS3, getFileFromS3, deleteFileFromS3, deleteProjectFilesFromS3 } from "./lib/s3";
@@ -594,7 +594,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/messages/stream", requireAuth, async (req: Request, res) => {
     try {
-      const { projectId, content, attachments } = req.body;
+      const { projectId, content, attachments, enableReasoning } = req.body;
 
       if (!(await checkProjectOwnership(projectId, req.userId!))) {
         return res.status(403).json({ error: "Forbidden: Access denied" });
@@ -663,17 +663,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Stream AI response
       let fullResponse = "";
+      let fullThinking = "";
       const toolCalls: any[] = [];
       const actions: any[] = [];
 
       try {
-        // Use chatWithAIStream which is already compatible with streaming
-        for await (const chunk of chatWithAIStream(aiMessages, SYSTEM_PROMPT)) {
+        // Use chatWithAIStream with reasoning mode support
+        for await (const chunk of chatWithAIStream(aiMessages, SYSTEM_PROMPT, enableReasoning || false, 4096)) {
           if (chunk.type === 'text') {
             fullResponse += chunk.content;
             // Only send to client if still connected
             if (clientConnected) {
               res.write(`data: ${JSON.stringify({ type: 'chunk', content: chunk.content })}\n\n`);
+            }
+          } else if (chunk.type === 'thinking') {
+            fullThinking += chunk.content || "";
+            // Send thinking chunks to client in real-time
+            if (clientConnected) {
+              res.write(`data: ${JSON.stringify({ type: 'thinking', content: chunk.content })}\n\n`);
             }
           } else if (chunk.type === 'action') {
             // Track actions and send to client in real-time

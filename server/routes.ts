@@ -988,6 +988,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
           actions: completedActions.length > 0 ? completedActions : null,
         });
 
+        // Auto-run workflow command if it exists and any file changes were made
+        const project = await storage.getProject(projectId);
+        if (project?.workflowCommand && toolCalls.length > 0) {
+          const hasFileChanges = toolCalls.some(tc => 
+            ['write_file', 'edit_file', 'create_boilerplate'].includes(tc.name)
+          );
+          
+          if (hasFileChanges) {
+            console.log(`Auto-running workflow command: ${project.workflowCommand}`);
+            // Run workflow command in background after file changes
+            executeShellCommand(projectId, project.workflowCommand).catch(err => 
+              console.error('Auto-run workflow command error:', err)
+            );
+          }
+        }
+
         clearInterval(keepaliveInterval);
 
         if (clientConnected) {

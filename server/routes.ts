@@ -565,8 +565,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const filename = `${timestamp}-${sanitizedOriginalName}`;
         const path = `attachments/${filename}`;
 
-        // Upload to S3
-        const s3Key = await uploadFileToS3(projectId, path, file.buffer.toString('base64'));
+        // Upload to S3 (store as binary, not base64)
+        const s3Key = await uploadFileToS3(projectId, path, file.buffer);
 
         // Get public URL (you may need to adjust based on your S3 configuration)
         const url = `https://s3.amazonaws.com/${process.env.S3_BUCKET_NAME}/${s3Key}`;

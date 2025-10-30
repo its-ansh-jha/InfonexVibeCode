@@ -53,16 +53,21 @@ export async function* chatWithAIStream(
             try {
               const imageUrl = typeof attachment === 'string' ? attachment : attachment.url;
               
-              // Fetch image and convert to base64
-              const response = await fetch(imageUrl);
-              const arrayBuffer = await response.arrayBuffer();
-              const base64Data = Buffer.from(arrayBuffer).toString('base64');
-              
               // Determine media type from URL or default to jpeg
               let mediaType = 'image/jpeg';
               if (imageUrl.includes('.png')) mediaType = 'image/png';
               else if (imageUrl.includes('.gif')) mediaType = 'image/gif';
               else if (imageUrl.includes('.webp')) mediaType = 'image/webp';
+              else if (imageUrl.includes('.jpg') || imageUrl.includes('.jpeg')) mediaType = 'image/jpeg';
+              
+              // Fetch image from S3 and convert to base64
+              const response = await fetch(imageUrl);
+              if (!response.ok) {
+                throw new Error(`Failed to fetch image: ${response.statusText}`);
+              }
+              
+              const arrayBuffer = await response.arrayBuffer();
+              const base64Data = Buffer.from(arrayBuffer).toString('base64');
               
               contentBlocks.push({
                 type: "image",

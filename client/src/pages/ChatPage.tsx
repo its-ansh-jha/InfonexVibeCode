@@ -296,6 +296,7 @@ export default function ChatPage() {
   const [streamingActions, setStreamingActions] = useState<Action[]>([]);
   const [selectedImages, setSelectedImages] = useState<File[]>([]);
   const [enableReasoning, setEnableReasoning] = useState(false);
+  const [isUploadingImages, setIsUploadingImages] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -332,13 +333,14 @@ export default function ChatPage() {
   }, [input]);
 
   const handleSend = async () => {
-    if ((!input.trim() && selectedImages.length === 0) || isStreaming) return;
+    if ((!input.trim() && selectedImages.length === 0) || isStreaming || isUploadingImages) return;
     
     const userMessage = input;
     const imagesToUpload = selectedImages;
     setInput("");
     setSelectedImages([]);
     setIsStreaming(true);
+    setIsUploadingImages(false);
     setStreamingMessage("");
     setStreamingThinking("");
     setStreamingTools([]);
@@ -361,23 +363,28 @@ export default function ChatPage() {
       // Upload images if any
       let attachments: string[] = [];
       if (imagesToUpload.length > 0) {
-        for (const image of imagesToUpload) {
-          const formData = new FormData();
-          formData.append('file', image);
-          formData.append('projectId', projectId!);
-          
-          const uploadResponse = await fetch("/api/upload/image", {
-            method: "POST",
-            headers: {
-              "Authorization": `Bearer ${idToken}`,
-            },
-            body: formData,
-          });
-          
-          if (uploadResponse.ok) {
-            const { url } = await uploadResponse.json();
-            attachments.push(url);
+        setIsUploadingImages(true);
+        try {
+          for (const image of imagesToUpload) {
+            const formData = new FormData();
+            formData.append('file', image);
+            formData.append('projectId', projectId!);
+            
+            const uploadResponse = await fetch("/api/upload/image", {
+              method: "POST",
+              headers: {
+                "Authorization": `Bearer ${idToken}`,
+              },
+              body: formData,
+            });
+            
+            if (uploadResponse.ok) {
+              const { url } = await uploadResponse.json();
+              attachments.push(url);
+            }
           }
+        } finally {
+          setIsUploadingImages(false);
         }
       }
       
@@ -800,12 +807,13 @@ export default function ChatPage() {
               />
               <Button
                 onClick={handleSend}
-                disabled={(!input.trim() && selectedImages.length === 0) || isStreaming}
+                disabled={(!input.trim() && selectedImages.length === 0) || isStreaming || isUploadingImages}
                 size="icon"
                 className="h-10 w-10 shrink-0 rounded-lg"
                 data-testid="button-send-message"
+                title={isUploadingImages ? "Uploading images..." : "Send message"}
               >
-                {isStreaming ? (
+                {isStreaming || isUploadingImages ? (
                   <Loader2 className="h-5 w-5 animate-spin" />
                 ) : (
                   <Send className="h-5 w-5" />

@@ -568,8 +568,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // Upload to S3 (store as binary, not base64)
         const s3Key = await uploadFileToS3(projectId, path, file.buffer);
 
-        // Get public URL (you may need to adjust based on your S3 configuration)
-        const url = `https://s3.amazonaws.com/${process.env.S3_BUCKET_NAME}/${s3Key}`;
+        // Get public URL with proper regional format
+        const region = process.env.AWS_REGION || 'us-east-1';
+        const url = `https://${process.env.AWS_S3_BUCKET_NAME}.s3.${region}.amazonaws.com/${s3Key}`;
 
         res.json({ url, path, s3Key });
       });

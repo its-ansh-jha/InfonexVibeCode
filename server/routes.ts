@@ -652,13 +652,35 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Get previous messages for context
       const previousMessages = await storage.getMessagesByProjectId(projectId);
-      const aiMessages = previousMessages.map(msg => ({
-        role: msg.role as "user" | "assistant",
-        content: msg.content,
-      }));
+      const aiMessages = previousMessages.map(msg => {
+        let messageContent = msg.content;
+        
+        // If message has image attachments, include them in the content
+        if (msg.attachments && Array.isArray(msg.attachments) && msg.attachments.length > 0) {
+          const imagesList = msg.attachments.map((att: any) => `[Image: ${att.url}]`).join('\n');
+          messageContent = `${msg.content}\n\nAttached Images:\n${imagesList}`;
+        }
+        
+        return {
+          role: msg.role as "user" | "assistant",
+          content: messageContent,
+        };
+      });
 
-      // Add current user message with sandbox context
-      const userMessageWithContext = sandboxContext ? `${content}${sandboxContext}` : content;
+      // Add current user message with attachments and sandbox context
+      let userMessageWithContext = content;
+      
+      // Include current attachments if provided
+      if (attachments && Array.isArray(attachments) && attachments.length > 0) {
+        const imagesList = attachments.map((att: any) => `[Image: ${att.url}]`).join('\n');
+        userMessageWithContext = `${content}\n\nAttached Images:\n${imagesList}`;
+      }
+      
+      // Add sandbox context
+      if (sandboxContext) {
+        userMessageWithContext += sandboxContext;
+      }
+      
       aiMessages.push({ role: "user" as const, content: userMessageWithContext });
 
       // Stream AI response

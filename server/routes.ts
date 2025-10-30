@@ -652,56 +652,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Get previous messages for context
       const previousMessages = await storage.getMessagesByProjectId(projectId);
-      const aiMessages = previousMessages.map(msg => {
-        let messageContent = msg.content;
-        
-        // If message has image attachments, include image URLs for AI to reference
-        if (msg.attachments && Array.isArray(msg.attachments) && msg.attachments.length > 0) {
-          const imagesList = msg.attachments.map((att: any) => {
-            if (typeof att === 'string') {
-              return `Image URL: ${att}`;
-            } else if (att.url) {
-              return `Image URL: ${att.url}`;
-            }
-            return '';
-          }).filter(Boolean).join('\n');
-          
-          if (imagesList) {
-            messageContent = `${msg.content}\n\nUser provided the following images:\n${imagesList}\n\nPlease analyze these images and respond to the user's request.`;
-          }
-        }
-        
-        return {
-          role: msg.role as "user" | "assistant",
-          content: messageContent,
-        };
-      });
+      const aiMessages = previousMessages.map(msg => ({
+        role: msg.role as "user" | "assistant",
+        content: msg.content,
+        attachments: msg.attachments || undefined,
+      }));
 
       // Add current user message with attachments and sandbox context
       let userMessageWithContext = content;
-      
-      // Include current attachments if provided
-      if (attachments && Array.isArray(attachments) && attachments.length > 0) {
-        const imagesList = attachments.map((att: any) => {
-          if (typeof att === 'string') {
-            return `Image URL: ${att}`;
-          } else if (att.url) {
-            return `Image URL: ${att.url}`;
-          }
-          return '';
-        }).filter(Boolean).join('\n');
-        
-        if (imagesList) {
-          userMessageWithContext = `${content}\n\nUser provided the following images:\n${imagesList}\n\nPlease analyze these images carefully and respond to the user's request based on what you see in the images.`;
-        }
-      }
       
       // Add sandbox context
       if (sandboxContext) {
         userMessageWithContext += sandboxContext;
       }
       
-      aiMessages.push({ role: "user" as const, content: userMessageWithContext });
+      aiMessages.push({ 
+        role: "user" as const, 
+        content: userMessageWithContext,
+        attachments: attachments || undefined
+      });
 
       // Stream AI response
       let fullResponse = "";

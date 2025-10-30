@@ -6,6 +6,7 @@ import {
 interface Message {
   role: "user" | "assistant" | "system";
   content: string;
+  attachments?: Array<{ url: string }>;
 }
 
 interface ToolCall {
@@ -40,12 +41,52 @@ export async function* chatWithAIStream(
     throw new Error("AWS credentials are not set");
   }
 
-  const conversationMessages = messages
-    .filter(msg => msg.role !== "system")
-    .map(msg => ({
-      role: msg.role === "assistant" ? "assistant" : "user",
-      content: [{ type: "text" as const, text: msg.content }],
-    }));
+  const conversationMessages = await Promise.all(
+    messages
+      .filter(msg => msg.role !== "system")
+      .map(async msg => {
+        const contentBlocks: Array<{ type: string; text?: string; source?: any }> = [];
+        
+        // Add images first if present
+        if (msg.attachments && Array.isArray(msg.attachments) && msg.attachments.length > 0) {
+          for (const attachment of msg.attachments) {
+            try {
+              const imageUrl = typeof attachment === 'string' ? attachment : attachment.url;
+              
+              // Fetch image and convert to base64
+              const response = await fetch(imageUrl);
+              const arrayBuffer = await response.arrayBuffer();
+              const base64Data = Buffer.from(arrayBuffer).toString('base64');
+              
+              // Determine media type from URL or default to jpeg
+              let mediaType = 'image/jpeg';
+              if (imageUrl.includes('.png')) mediaType = 'image/png';
+              else if (imageUrl.includes('.gif')) mediaType = 'image/gif';
+              else if (imageUrl.includes('.webp')) mediaType = 'image/webp';
+              
+              contentBlocks.push({
+                type: "image",
+                source: {
+                  type: "base64",
+                  media_type: mediaType,
+                  data: base64Data
+                }
+              });
+            } catch (error) {
+              console.error('Failed to fetch image for vision:', error);
+            }
+          }
+        }
+        
+        // Add text content
+        contentBlocks.push({ type: "text", text: msg.content });
+        
+        return {
+          role: msg.role === "assistant" ? "assistant" : "user",
+          content: contentBlocks,
+        };
+      })
+  );
 
   const requestBody: any = {
     anthropic_version: "bedrock-2023-05-31",
